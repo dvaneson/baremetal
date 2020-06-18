@@ -1,0 +1,293 @@
+[Sample command:
+
+   milc -i../../lc-baremetal/libs-lc wvram.llc portBitmap.llc -pcsosroso -gportBitmap.dot
+
+]
+
+> -- require "core.llc"
+> require "ia32.llc"
+> require "portio.llc"
+
+This program provides an LC implementation of a bitmap data structure
+that represents a set of 16 bit numbers using an array of `Word`
+values.  This example was motivated by code in the seL4 source code
+for i386 machines that uses a data structure like this to represent
+the set of allocated IO port numbers (each of which is a 16 bit
+quantity, although we could also handle other sizes in the same way).
+
+The first step is to view each 16 bit port number as a pair of an 11
+bit "index" and a 5 bit "position":
+
+                         |...........|.....|
+                           index/11   pos/5
+
+We use the specific bit counts shown here because we are assuming a 32
+bit word size, so any single bit in a Word can be uniquely identified
+by a 5 bit value.  However, we can also interpret the index and
+position using `Ix` types with appropriate bounds:
+
+> type PortIndex = Ix 2K       -- 2^11 elements
+> type PortPos   = Ix WordSize -- 2^5  bits
+
+The constants chosen here are hardwired to the specific choices that
+are needed for this example, but if we had the ability do type level
+arithmetic, as is possible in Habit, then we could write all of these
+types in a more generic fashion (for example, as functions of
+`PortBits` and `WordSize`).
+
+We can calculate the index and position corresponding to a given
+`Port` value by using some simple bit twiddling primitives:
+
+> portPos  :: Port -> PortPos
+> portPos i = modIx (bitsLo5 i)
+
+> external bitsLo5  {primBitsLo m 5}  :: Bit m -> Bit 5
+
+> portIndex  :: Port -> PortIndex
+> portIndex i = modIx (bitsHi11 i)
+
+> external bitsHi11 {primBitsHi m 11} :: Bit m -> Bit 11
+
+Note that we use two external definitions here to identify specific
+instances of the `primBitsLo` and `primBitsHi` primitives that are
+needed to extract the index and pos values from a given `Bit 16`.
+These are required here to avoid ambiguity.
+
+Now we can represent a set of `Port` values as an array of 2K `Word`
+values:
+
+> area portBitmap <- initArrayAll 0 :: Ref (Array 2K (Stored Word))
+
+To determine if a given port is included in the set, we use its index
+to identify a specific `Word` within the array, and then use its
+position to select a specific bit within that `Word`: if the bit is 1,
+then the port is included in the set, but otherwise the bit must be 0,
+meaning that the port is not included in the set.  The following
+diagram illustrates this idea, using an "x" to mark the bit position
+for a port with the given index and pos values:
+
+       <--- increasing array indices, increasing bit positions
+
+                        index <-----------------------------------0
+    |........|........|..x.....|........|........|........|z......y|
+                        pos <-0
+
+For the purposes of this illustration, we only show 8 bits for each
+`Word`.  Note also that we draw the diagram with both index values and
+bit positions increasing from right to left, which is the standard
+approach in the latter case, but somewhat unconventional in the
+former.  In particular, this means that the bit marked "y" on the far
+right has zero index and zero position, while the bit marked "z" also
+has zero index, but has position 31.
+
+To make the previous description concrete, here is an implementation
+of a function for determining whether a given `Port` value is included
+in the set represented by `portBitmap`:
+
+> entrypoint includesPort :: Port -> Proc Bool
+> includesPort port = do w <- get (portBitmap @ portIndex port)
+>                        return (bitTest w (portPos port))
+
+Functions for setting, clearing, or flipping individual bits can be
+defined in a similar manner using the corresponding `BinManip` primitives.
+
+For the purposes of seL4, however, we need operations that work, not on
+individual elements of the bitmap, but instead on ranges of `Port` values,
+from some initial `from` value up to and including some final `to` value.
+Note that the bits corresponding to ports in this range are all in the
+words between (and including) positions `findex` and `tindex` in the
+`portBitmap` array, where these are the index values corresponding to `from`
+and `to`, respectively:
+
+       <--- increasing array indices, increasing bit positions
+
+                    tindex                     findex
+    |........|........|........|........|........|........|........|
+              00000111 11111111 11111111 11110000
+               tmask                       fmask
+
+More precisely, we can identify the specific bits corresponding to ports
+in the range `from` to `to` by a sequence of mask values, as illustrated
+in the diagram.  The mask on the right, labeled `fmask`, corresponds to
+the start of the range with 1s at and above the bit position for `from`
+and 0s below.  Similarly, the mask on the right, labeled `tmask`, has 0s
+above the corresponding bit position, and 1s in all lower positions.  For
+other array elements between these extremes, we use a mask of all 1s,
+which can be constructed using `not 0`, to indicate that all of these bits
+are included.  The masks on each end can be constructed using some simple
+bit twiddling that is captured by the following definitions:
+
+> bitsFromAndAbove      :: PortPos -> Word
+> bitsFromAndAbove i     = bitNot (bitDec (bitBit i))
+
+> bitsUptoAndIncluding  :: PortPos -> Word
+> bitsUptoAndIncluding i = let n = bitBit i
+>                          in bitOr n (bitDec n)
+
+Both of these operations begin by setting a single bit in a word and then
+decrementing the result, but they differ in whether the final step uses a
+bitwise `or` or a bitwise `not`, as illustrated below (for clarity, we use
+"." rather than "0" for the zero bits in these diagrams):
+
+            i <---------0                             i <---------0
+    |.......1............|    n = bitBit i    |.......1............|
+    |........111111111111|    m = bitDec n    |........111111111111|
+    |.......1111111111111|<-or m n     not m->|11111111............|                    
+
+    bitsUptoAndIncluding i                      bitsFromAndAbove i
+
+Note also that the preceding diagram assumes `findex < tindex`.  In the
+special case where the two indices are equal, then we can use a single
+word mask by taking the bitwise `and` of both `tmask` and `fmask`:
+
+       <--- increasing array indices, increasing bit positions
+
+                            tindex = findex
+    |........|........|........|........|........|........|........|
+                                00011111 tmask
+                                11111100 fmask
+                                00011100 tmask `and` fmask
+
+In any of these cases, we can use the resulting sequence of masks (and
+associated array indices) to implement some useful operations:
+
+- To determine if any of the ports between `from` and `to` are included
+  in the set, perform a bitwise `and` between each mask and the
+  corresponding array element, returning `True` if any of them produces
+  a nonzero result.
+
+- To add all of the ports between `from` and `to` to the set, update
+  each array element by performing a bitwise `or` with the corresponding
+  mask.
+
+- To remove all of the ports between `from` and `to`, update each array
+  element by performing a bitwise `and` with complement of the
+  corresponding mask.
+
+We can capture the common structure for all of these (and more) using a
+higher order function, `bitmapRange`, with three parameters that account
+for the variations between different algorithms:
+
+- `none :: r` is the value that will be returned if the range is empty
+  (strictly speaking, if `findex > `tindex`).
+
+- `test :: Word -> PortIndex -> Proc r` produces a result of type `r`
+  for the given mask and index values.
+
+- `cont :: r -> Bool` is a predicate that takes the result of a
+  preceding `test` call and determines whether the computation should
+  proceed to the next mask and index pair (the `True` case), or else
+  just return immediately with that result (the `False` case).
+
+For operations where there is no useful return result---like those that
+set or clear a range of bits, for example---we can just use `Unit`
+values for the result of each `test`, and a constant `cont` predicate
+that always returns `True`, ensuring that the algorithm visits all of
+the array elements that are in range:
+
+> entrypoint rangeSet :: Port -> Port -> Proc Unit
+> rangeSet = bitmapRange Unit test (\x -> True)
+>  where m `test` i = update (portBitmap @ i) (or m)
+
+> entrypoint rangeClear :: Port -> Port -> Proc Unit
+> rangeClear = bitmapRange Unit test (\x -> True)
+>  where m `test` i = update (portBitmap @ i) (and (not m))
+
+On the other hand, we can use a `Bool` return type for the operation
+that searches to determine if whether all of the ports in the given
+range are unused.  In this case, if the result of a preceding `test`
+is `True`, then we should continue on to the next mask (which is why
+we use the identity function as `cont`).  Indeed, the only way that
+this particular algorithm can return `False` is if the bitwise `and`
+of an array element `v` with the corresponding mask `m` produces a
+nonzero result (explaining the following definition of `test`):
+
+> entrypoint rangeUnused :: Port -> Port -> Proc Bool
+> rangeUnused  = bitmapRange True test (\x -> x)
+>  where m `test` i = do v <- get (portBitmap @ i)
+>                        return (0 == (m `and` v))
+
+It only remains to provide a definition for the `bitmapRange` function
+used in each of the previous examples.  One relatively unusual component
+in this is a function:
+
+    ltInc :: Ix n -> Ix n -> Maybe (Ix n)
+
+which tests to see if the first argument is less than the second and,
+if so, returns the successor of the first argument as evidence.  (If
+the first argument is less than the second, then the successor must
+indeed be valid for the given index type.)  This function is used in
+two ways in `bitmapRange`: at the start, to identify cases where
+the `fmask` and `tmask` values will be applied to disinct words;
+and then later to determine when the `loop` through the `not 0`
+masks should end and the `tmask` should be used in a final `test`.
+
+> bitmapRange :: r                              -- none
+>             -> (Word -> PortIndex -> Proc r)  -- test
+>             -> (r -> Bool)                    -- cont
+>             -> Port -> Port -> Proc r
+> bitmapRange none test cont from to
+>  = case findex `ltInc` tindex of
+>      Nothing -> if findex `eqIx` tindex
+>                    then (fmask `and` tmask) `test` findex
+>                    else return none
+>      Just i  -> (fmask `test` findex) >>= loop i
+>    where findex   = portIndex from
+>          fmask    = bitsFromAndAbove (portPos from)
+>          tindex   = portIndex to
+>          tmask    = bitsUptoAndIncluding (portPos to)
+>          loop i r = if cont r
+>                       then case i `ltInc` tindex of
+>                              Just j  -> (not 0 `test` i) >>= loop j
+>                              Nothing -> tmask `test` tindex
+>                       else return r
+
+These definitions use higher-order functions, monadic abstractions,
+and algebraic datatypes, which are language features that can
+potentially have a negative impact on performance.  Happily, the
+optimizer in our compiler is able to produce efficient, specialized
+implementations for `rangeSet`, `rangeClear`, and `rangeUnused` that
+do not require any dynamic memory allocation, either for closures or
+data values.  In fact, in each case, the generated code is comparable
+to what might be expected if the implementations had been written from
+the start in C.  The advantages of writing the code in LC/Habit
+include stronger type checking (although it can be hard to appreciate
+the importance of this in code that is already (type) correct), and
+greater levels of reuse (as witnessed by the compact definitions for
+the three operations above in terms of a general `bitmapRange`
+operation).
+
+------------
+
+Notes on corresponding code in seL4:  As mentioned in the above, seL4
+includes code (in seL4-10.0.0/src/arch/x86/object/ioport.c) for
+representing a set of ports as a bitmap.  The LC implementation
+described in this document was intended to provide comparable
+functionality, but it is not a direct rewrite or translation, and it
+appears that there are some small differences in details of the
+underlying algorithms that are used.  Nevertheless, given that they
+are implementing essentially the same basic data structure, the broad
+similarities between the two programs are to be expected.
+
+Instead of `rangeSet` and `rangeClear`, the seL4 code uses a single
+function, `setIOPortMask`, that takes an extra boolean parameter to
+specify whether a "set" or "clear" action is required.  As it updates
+each word in the array, the implementation checks this flag to
+determine which form of update should be perfomed.  This function uses
+two auxiliary functions, `make_pattern` and `apply_pattern`.  Unlike
+the LC implementation here, `setIOPortMask` also takes the underlying
+bitmap as an extra parameter so that it can (potentially) be reused
+with other bitmaps; our `rangeSet` and `rangeClear` functions could
+potentially be parameterized in a similar way.
+
+The separate function, `isIOPortRangeFree`, implements an operation
+similar to `rangeUnused`.  It uses the same `make_pattern` auxiliary
+function as `setIOPortMask`, but is specialized to the
+`x86KSAllocatedIOPorts` bitmap.  In principle, the implementation of
+`rangeUnused` will perform an unnecessary bitwise `and` with the mask
+of `not 0` on each array word strictly between `findex` and `tindex`;
+this operation does not appear in the source for `isIOPortRangeFree`.
+That said, it also does not appear in the compiled version of
+`rangeUnused` because the optimizer eliminates bitwise `and`s with
+`not 0`.
+

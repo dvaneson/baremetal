@@ -1,0 +1,140 @@
+[ Sample command line:
+
+milc -i../../lc-baremetal/libs-lc wvram.llc asid.llc
+
+]
+
+> require "ia32.llc"
+
+An ASID is an "Address Space IDentifier".  In our kernel, we use
+ASIDs as short references to the page directory structures that
+are available for representing virtual address spaces.
+
+For the time being, we represent ASIDs as 12 bit values, split
+in to two pieces:
+
+> type    ASIDHi = 4     -- Maximum number of ASID Pools
+> type    ASIDLo = 1K    -- Maximum number of entries in each ASID pool
+> bitdata ASID   = ASID [ hi :: Ix ASIDHi | lo :: Ix ASIDLo ]
+
+This allows us to implement a map from ASIDs to page directories
+as a two-level structure, using the most significant bits of each
+ASID to choose a "pool" of slots, each of which can be used to
+point to a specific virtual address space (i.e., page directory):
+
+   asidPools :: Array AsidHi (Stored (Ptr ASIDPool))
+   +---+---+---+---+
+   |   |   | 0 | 0 |
+   +---+---+---+---+
+     |   |
+     |   |      :: ASIDPool
+     |   |      +---+---+---+---+---     ---+---+---+---+---+
+     |   +----->|   |   |   |   |   . . .   |   |   |   |   |
+     |          +---+---+---+---+---     ---+---+---+---+---+
+     |
+     |   :: ASIDPool
+     |   +---+---+---+---+---     ---+---+---+---+---+
+     +-->|   | 0 |   | 0 |   . . .   |   |   |   |   |
+         +---+---+---+---+---     ---+---+---+---+---+
+           |       |
+           |       |   :: PageDir
+           |       |   +---------      -------+
+           |       +-->|          . . .       |
+           |           +---------      -------+
+           |
+           |   :: PageDir
+           |   +---------      -------+
+           +-->|          . . .       |
+               +---------      -------+
+
+> struct ASIDPool /4K
+>   [ pagedirs :: Array ASIDLo ASIDEntry ]
+>   aligned 4K
+
+> type ASIDEntry = Stored (Ptr PageDir)
+
+The entry into this tree structure is an array of pointers to
+ASID pools:
+
+> area asidPools <- nullArray :: Ref (Array ASIDHi (Stored (Ptr ASIDPool)))
+
+The pool slot corresponding to a specific ASID can be calculated
+using the following function (returning a Null pointer if there is
+no pool allocated for the given ASID value):
+
+> export lookupASID :: ASID -> Proc (Ptr ASIDEntry)
+> lookupASID asid
+>   = do case<- get (asidPools @ asid.hi) of
+>          Null     -> return Null
+>          Ref pool -> return (Ref (pool.pagedirs @ asid.lo))
+
+Of course, even if lookupASID returns a non-null pointer, it is
+still possible for the value stored at that location to be Null.
+This latter condition would indicate that the specified ASID is
+not currently associated with a specific address space.
+
+It is only possible to add a new ASID pool if there is a Null
+entry in the top level asidPools structure.  Similarly, it is only
+possible to allocate a slot within a single ASID pool if that pool
+includes a Null entry.  As a generalization for these operations,
+we define a function for searching an arbitrary array of pointers
+to find the first slot that contains a Null pointer; the result is
+a pointer to that slot (which could be Null itself if none of the
+array slots contain Null).
+
+> findNull      :: Ref (Array n (Stored (Ptr a))) -> Proc (Ptr (Stored (Ptr a)))
+> findNull array = loop ix0
+>  where loop i = do let r = array @ i
+>                    case<- get r of
+>                      Null    -> return (Ref r)
+>                      Ref obj -> case incIx i of
+>                                   Just j  -> loop j
+>                                   Nothing -> return Null
+
+This function can be used at both levels in the ASID tree shown
+above:
+
+- When we are looking for an available ASID pool slot:
+
+> export findNullPool :: Proc (Ptr (Stored (Ptr ASIDPool)))
+> findNullPool  = findNull asidPools
+
+- And when we are looking for an available slot within a specific
+  ASID pool:
+
+> export findNullSlot     :: Ref ASIDPool -> Proc (Ptr (Stored (Ptr PageDir)))
+> findNullSlot pool = findNull pool.pagedirs
+
+It is possible, however, that we might want to return, not a
+pointer to the available slot, but the index of that slot instead.
+Happily, this can also be captured quite easily in a similar style
+to the definition of `findNull`:
+
+> findIx :: (a -> Bool) -> Ref (Array n (Stored a)) -> Proc (Maybe (Ix n))
+> findIx p array = loop ix0
+>  where loop i = do v <- get (array @ i)
+>                    if p v
+>                      then return (Just i)
+>                      else case incIx i of
+>                             Just j  -> loop j
+>                             Nothing -> return Nothing
+
+Note that this is a higher-order function, parameterized by a predicate
+that specifies the property of the array element that we are hoping to
+find.  To search for `Null` values in an array of pointers, for example,
+we can define the following predicate:
+
+> null  :: Ptr a -> Bool
+> null p = case p of
+>            Null  -> True
+>            Ref r -> False
+
+And then define analogs of `findNullPool` and `findNullSlot` that
+return array indices instead of pointers:
+
+> export findNullPoolIx :: Proc (Maybe (Ix ASIDHi))
+> findNullPoolIx         = findIx null asidPools
+
+> export findNullSlotIx :: Ref ASIDPool -> Proc (Maybe (Ix ASIDLo))
+> findNullSlotIx pool    = findIx null pool.pagedirs
+

@@ -1,0 +1,17 @@
+*.o
+*.lst
+*.a
+*.map
+*.zip
+*.gz
+*.iso
+mimgload
+twiddletests
+bootinfo/bootinfo
+bootinfo/cdrom/bootinfo
+hello/hello
+hello/cdrom/hello
+mimg/mimgmake
+vram/video1
+*/kernel/kernel
+*/user/user
