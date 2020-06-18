@@ -27,6 +27,15 @@
 #include "paging.h"
 #include "memory.h"
 
+// Needs these defines to prevent IDE error messages
+#ifndef KERNEL_SPACE
+#define KERNEL_SPACE 0
+#endif
+
+#ifndef KERNEL_LOAD
+#define KERNEL_LOAD 0
+#endif
+
 /*-------------------------------------------------------------------------
  * Basic code for halting the processor and reporting a fatal error:
  */
@@ -123,11 +132,7 @@ void kernel()
 
   printf("kernel code is at 0x%x\n", kernel);
 
-  // (Step 3): Remove the following halt() call once you are
-  // ready to proceed!  (Or move it just after the section of
-  // code that you are testing.)
-
-  // TODO (Step 3): Scan the memory map to find the biggest region of
+  // DONE (Step 3): Scan the memory map to find the biggest region of
   // available pages subject to the constraints:
   //  - The start address (which should be stored in physStart)
   //    must have a zero page offset and must be >= KERNEL_LOAD,
@@ -141,18 +146,32 @@ void kernel()
   // that you can trace its execution and be comfortable that
   // it is working correctly.
 
+  physStart = 0;
+  physEnd = 0;
   printf("\nConsidering:\n");
   for (i = 0; i < mmap[0]; i++)
   {
     start = firstPageAfter(mmap[2 * i + 1]);
     end = endPageBefore(mmap[2 * i + 2]);
-    printf("\t[%x-%x]\tFull pages: [%x-%x]\n", mmap[2 * i + 1], mmap[2 * i + 2], start, end);
-    // printf("\t[%x-%x]\n", mmap[2 * i + 1], mmap[2 * i + 2]);
+    printf("  [%08x-%08x], full pages [%08x-%08x]\n", mmap[2 * i + 1], mmap[2 * i + 2], start, end);
+    if (start >= KERNEL_LOAD && end < PHYSMAP && start < end)
+    {
+      if (physEnd - physStart < end - start)
+      {
+        physStart = start;
+        physEnd = end;
+      }
+    }
   }
+  printf("\nChosen memory range:\n  [%08x-%08x]\n  %d bytes", physStart, physEnd, physEnd - physStart);
   halt();
 
-  // TODO (Step 3): Report a fatal error if there is no suitable
+  // DONE (Step 3): Report a fatal error if there is no suitable
   // region of memory.
+  if (physStart == 0 && physEnd == 0)
+  {
+    fatal("Could not find area in memory map for pages.");
+  }
 
   // TODO (Step 3): Scan the list of headers for loaded regions of
   // memory to look for conflicts with the [physStart..physEnd)
