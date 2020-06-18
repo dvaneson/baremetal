@@ -62,17 +62,16 @@
 
 // pageStart(x) should return the address of the first byte in the page
 // that contains address x.  e.g. pageStart(0x1234) = 0x1000.
-#define pageStart(x)      ((x) & ~(0xfff))
+#define pageStart(x)      ((x) & ~(PAGEMASK))
 
 // pageEnd(x) should return the address of the last byte in the page
 // that contains address x.  
 // e.g. pageEnd(0x1234) = 0x1fff.
-#define pageEnd(x)        ((x) | 0xfff)
+#define pageEnd(x)        ((x) | PAGEMASK)
 
 // pageNext(x) should return the address of the first byte in the
 // page that comes immediately after the page containing x.
 // e.g. pageNext(0x1234) = 0x2000.
-// #define pageNext(x)       (pageStart(x) + 0x1000)
 #define pageNext(x)       (pageEnd(x) + 1)
 
 // firstPageAfter(x) should return the address of the first page
@@ -81,8 +80,7 @@
 // using the lowest possible address.)  
 // e.g. firstPageAfter(0x1234) = 0x2000
 // but, firstPageAfter(0x2000) = 0x2000.
-// #define firstPageAfter(x) (((x) & 0xfff) == 0 ? x : pageNext(x))
-#define firstPageAfter(x) (pageNext((x) + 0xfff))
+#define firstPageAfter(x) (pageStart((x) + PAGEMASK))
 
 // endPageBefore(x) should return the end address of the first
 // page whose end address is <= x.  (This time, by "first", we
@@ -90,8 +88,7 @@
 // decreased, i.e., using the highest possible address.)
 // e.g. endPageBefore(0x1234) = 0x0fff 
 // but, endPageBefore(0x1fff) = 0x1fff
-// #define endPageBefore(x)  (((x) & 0xfff) == 0xfff ? x : pageEnd(x) - 0x1000)
-#define endPageBefore(x)  (pageEnd((x) - 0xfff))
+#define endPageBefore(x)  (pageEnd((x) - PAGEMASK))
 
 #endif
 /*-----------------------------------------------------------------------*/
