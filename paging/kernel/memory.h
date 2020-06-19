@@ -24,6 +24,15 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
+// Need these defines to prevent IDE error messages
+#ifndef KERNEL_SPACE
+#define KERNEL_SPACE 0
+#endif
+
+#ifndef KERNEL_LOAD
+#define KERNEL_LOAD 0
+#endif
+
 /*-------------------------------------------------------------------------
  * Memory layout:
  */

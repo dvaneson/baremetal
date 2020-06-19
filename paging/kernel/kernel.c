@@ -27,15 +27,6 @@
 #include "paging.h"
 #include "simpleio.h"
 
-// Needs these defines to prevent IDE error messages
-#ifndef KERNEL_SPACE
-#define KERNEL_SPACE 0
-#endif
-
-#ifndef KERNEL_LOAD
-#define KERNEL_LOAD 0
-#endif
-
 /*-------------------------------------------------------------------------
  * Basic code for halting the processor and reporting a fatal error:
  */
@@ -220,10 +211,6 @@ void kernel() {
     // be ... ?   :-)
 
     showPdir(newpdir);
-    for (int i = 0; i < 4; ++i) {
-        newpdir = allocPdir();
-        showPdir(newpdir);
-    }
     halt();
 
 #ifdef IM_FEELING_LUCKY
