@@ -76,7 +76,10 @@ unsigned *allocPage() {
     // these different kinds of address, but at least it is
     // also easy to convert between them using the fromPhys
     // and toPhys macros ...
+
     unsigned *page = 0;
+    // The number of words in a page, 2^12 / 2^2 = 2^10 = 1024
+    int page_words = (1 << PAGESIZE) >> 2;
 
     // Trigger a fatal error if there is not enough space left
     if (physEnd < pageEnd(physStart)) {
@@ -85,7 +88,7 @@ unsigned *allocPage() {
 
     // Write 0 to every word of the page
     page = fromPhys(unsigned *, physStart);
-    for (int i = 0; i < 1024; ++i) {
+    for (int i = 0; i < page_words; ++i) {
         page[i] = 0;
     }
 
