@@ -342,7 +342,7 @@ exc\num:
 	handler num=11, func=nohandler, errorcode=1	# segment not present
 	handler num=12, func=nohandler, errorcode=1	# stack-segment fault
 	handler num=13, func=nohandler, errorcode=1	# general protection
-	handler num=14, func=nohandler, errorcode=1	# page fault
+	handler num=14, func=pfhandler, errorcode=1	# page fault
 	handler num=16, func=nohandler			# math fault
 	handler num=17, func=nohandler, errorcode=1	# alignment check
 	handler num=18, func=nohandler			# machine check
