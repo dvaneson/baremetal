@@ -54,18 +54,16 @@ unsigned physStart;  // Set during initialization to start of memory pool
 unsigned physEnd;    // Set during initialization to end of memory pool
 
 unsigned *allocPage() {
-    fatal("You have not implemented the allocPage() function (yet)!");
-
-    // TODO (Step 4): Allocate a page of data, starting at
+    // DONE (Step 4): Allocate a page of data, starting at
     // the physical address that is specified by physStart,
     // but returning a pointer to the region in virtual
-    // memory.  The implementation should:
-    //   - Trigger a fatal error if there is not enough
+    // memory. The implementation should:
+    //   + Trigger a fatal error if there is not enough
     //     space left in [physStart .. physEnd)
-    //   - Write zero in to every byte (or word, for a
+    //   + Write zero in to every byte (or word, for a
     //     more efficient implementation) of the page
     //     before returning a pointer.
-    //   - Update physStart so that it points to the
+    //   + Update physStart so that it points to the
     //     next available page in memory after the
     //     allocation is complete ...
     // Be very careful to distinguish between places in your
@@ -78,8 +76,23 @@ unsigned *allocPage() {
     // these different kinds of address, but at least it is
     // also easy to convert between them using the fromPhys
     // and toPhys macros ...
+    unsigned *page = 0;
 
-    return 0;  // TODO (Step 4): Replace this placeholder with the proper value
+    // Trigger a fatal error if there is not enough space left
+    if (physEnd < pageEnd(physStart)) {
+        fatal("Could not allocate a page of data, not enough memory.");
+    }
+
+    // Write 0 to every word of the page
+    page = fromPhys(unsigned *, physStart);
+    for (int i = 0; i < 1024; ++i) {
+        page[i] = 0;
+    }
+
+    // Update physStart to next available page
+    physStart = pageNext(physStart);
+
+    return page;
 }
 
 /*-------------------------------------------------------------------------
@@ -197,7 +210,6 @@ void kernel() {
 
     printf("\nWill allocate from region [%08x-%08x], %d bytes\n", physStart,
            physEnd, 1 + physEnd - physStart);
-    halt();
 
     // Now we will build a new page directory:
     struct Pdir *newpdir = allocPdir();
@@ -207,6 +219,11 @@ void kernel() {
     // be ... ?   :-)
 
     showPdir(newpdir);
+    for (int i = 0; i < 4; ++i) {
+        newpdir = allocPdir();
+        showPdir(newpdir);
+    }
+    halt();
 
 #ifdef IM_FEELING_LUCKY
     setPdir(toPhys(newpdir));
