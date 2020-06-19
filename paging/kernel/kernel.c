@@ -50,8 +50,8 @@ void fatal(char *msg) {
  * Memory management: simple functionality for allocating pages of
  * memory for use in constructing page tables, etc.
  */
-unsigned physStart;  // Set during initialization to start of memory pool
-unsigned physEnd;    // Set during initialization to end of memory pool
+unsigned physStart; // Set during initialization to start of memory pool
+unsigned physEnd;   // Set during initialization to end of memory pool
 
 unsigned *allocPage() {
     // DONE (Step 4): Allocate a page of data, starting at
@@ -117,7 +117,7 @@ void kernel() {
     setAttr(0x2e);
     cls();
     setAttr(7);
-    setWindow(1, 23, 1, 45);  // kernel on left hand side
+    setWindow(1, 23, 1, 45); // kernel on left hand side
     cls();
     printf("Paging kernel has booted!\n");
 
