@@ -39,7 +39,7 @@ entry:	cli			# Turn off interrupts
 	leal    (initdir-KERNEL_SPACE), %edi
 	movl    %edi, %esi      # save in %esi
 
-	movl    $1024, %ecx     # Zero out complete page directory. 
+	movl    $PAGEWORDS, %ecx     # Zero out complete page directory. 
 	movl    $0, %eax		# 1024 b/c page size = 4096 and 0'ing 4 bytes at a time
 1:	movl    %eax, (%edi)
 	addl    $4, %edi

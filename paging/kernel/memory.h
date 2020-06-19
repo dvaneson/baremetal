@@ -43,8 +43,10 @@
 #define PERMS_SUPERPAGE   0x80 //                             superpg
 
 #define PAGESIZE  12
+#define PAGEBYTES (1 << PAGESIZE)
+#define PAGEWORDS (PAGEBYTES >> 2)
+#define PAGEMASK  (PAGEBYTES - 1)
 #define SUPERSIZE 22
-#define PAGEMASK  ((1 << PAGESIZE) - 1)
 
 /*-------------------------------------------------------------------------
  * General bit twiddling:
