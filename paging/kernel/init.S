@@ -39,7 +39,7 @@ entry:	cli			# Turn off interrupts
 	leal    (initdir-KERNEL_SPACE), %edi
 	movl    %edi, %esi      # save in %esi
 
-	movl    $1024, %ecx     # Zero out complete page directory
+	movl    $1024, %ecx     # Zero out complete page directory. 1024 b/c page size = 4096 & 0'ing 4 bytes at a time
 	movl    $0, %eax
 1:	movl    %eax, (%edi)
 	addl    $4, %edi
@@ -53,7 +53,7 @@ entry:	cli			# Turn off interrupts
 1:	movl    %eax, (%edi)
 	movl    %eax, (4*(KERNEL_SPACE>>SUPERSIZE))(%edi)
 	addl    $4, %edi        # move to next page dir slots
-	addl    $(4<<20), %eax  # entry for next superpage to be mapped
+	addl    $(1<<SUPERSIZE), %eax  # entry for next superpage to be mapped
 	decl    %ecx
 	jnz     1b
 
