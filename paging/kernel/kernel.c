@@ -160,34 +160,42 @@ void kernel() {
     // DONE (Step 3): Report a fatal error if there is no suitable
     // region of memory.
 
-    if (physStart == 0 && physEnd == 0) {
-        fatal("Could not find area in memory map for pages.");
+    if (physEnd <= physStart) {
+        fatal("Could not find a valid region in memory map for pages.");
     }
 
-    // TODO (Step 3): Scan the list of headers for loaded regions of
+    printf("\nChosen region [%08x-%08x]\n", physStart, physEnd);
+
+    // DONE (Step 3): Scan the list of headers for loaded regions of
     // memory to look for conflicts with the [physStart..physEnd)
     // region.  If you find a conflict, increase physStart to point
     // to the start of the first page after the conflicting region.
 
-    printf("Header conflicts:\n");
+    printf("\nHeader conflicts:\n");
     for (i = 0; i < hdrs[0]; i++) {
         start = hdrs[3 * i + 1];
         end = hdrs[3 * i + 2];
-        if (end < physStart) physStart = end + 1;
-        if (start > physEnd) physEnd = start - 1;
+        if (end < physEnd && end > physStart)
+            physStart = firstPageAfter(end + 1);
+        if (start > physStart && start < physEnd)
+            physEnd = endPageBefore(start - 1);
 
         printf("  header[%d] = [%08x-%08x], updated region [%08x-%08x]\n", i,
                start, end, physStart, physEnd);
     }
 
-    // TODO (Step 3): Report a fatal error if this process ends with
+    // DONE (Step 3): Report a fatal error if this process ends with
     // an empty region of physical memory.
+
+    if (physEnd <= physStart) {
+        fatal("After shrinking region for headers, region is invalid");
+    }
 
     // Display the upper and lower bounds of the chosen memory
     // region, as well as the total number of bytes that it
     // contains.
 
-    printf("Will allocate from region [%08x-%08x], %d bytes\n", physStart,
+    printf("\nWill allocate from region [%08x-%08x], %d bytes\n", physStart,
            physEnd, 1 + physEnd - physStart);
     halt();
 
