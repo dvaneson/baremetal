@@ -51,11 +51,12 @@
 #define PERMS_USER_RW     0x07 // present, write, user level
 #define PERMS_SUPERPAGE   0x80 //                             superpg
 
-#define PAGESIZE  12
-#define PAGEBYTES (1 << PAGESIZE)
-#define PAGEWORDS (PAGEBYTES >> 2)
-#define PAGEMASK  (PAGEBYTES - 1)
-#define SUPERSIZE 22
+#define PAGESIZE   12
+#define PAGEBYTES  (1 << PAGESIZE)
+#define PAGEWORDS  (PAGEBYTES >> 2)
+#define PAGEMASK   (PAGEBYTES - 1)
+#define SUPERSIZE  22
+#define SUPERBYTES (1 << SUPERSIZE)
 
 /*-------------------------------------------------------------------------
  * General bit twiddling:

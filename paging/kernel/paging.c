@@ -34,18 +34,16 @@ extern void fatal(char *msg);
 struct Pdir *allocPdir() {
     // Allocate a fresh page directory:
     struct Pdir *pdir = (struct Pdir *)allocPage();
-    unsigned page_entry = PERMS_KERNELSPACE;
+    unsigned kern_entries = (PHYSMAP >> SUPERSIZE);
     unsigned kern_addr = (KERNEL_SPACE >> SUPERSIZE);
 
-    // TODO (Step 5): Add superpage mappings to pdir for the first PHYSMAP
+    // DONE (Step 5): Add superpage mappings to pdir for the first PHYSMAP
     // bytes of physical memory.  You should use a bitwise or
     // operation to ensure that the PERMS_KERNELSPACE bits are set
     // in every PDE that you create.
 
-    for (unsigned i = 0; i < (PHYSMAP >> SUPERSIZE); ++i) {
-        pdir->pde[i + kern_addr] = (i * (1 << SUPERSIZE)) | PERMS_KERNELSPACE;
-        // pdir->pde[kern_addr + i] = page_entry;
-        // page_entry += (1 << SUPERSIZE);
+    for (unsigned i = 0; i < kern_entries; ++i) {
+        pdir->pde[i + kern_addr] = (i * SUPERBYTES) | PERMS_KERNELSPACE;
     }
 
     return pdir;
