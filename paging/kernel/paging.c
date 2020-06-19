@@ -21,30 +21,38 @@
  * paging.c:
  * Mark P Jones, Portland State University
  *-----------------------------------------------------------------------*/
-#include "simpleio.h"		// For printf (debugging output)
 #include "paging.h"
 #include "memory.h"
+#include "simpleio.h" // For printf (debugging output)
 
-extern unsigned* allocPage();
-extern void      fatal(char* msg);
+extern unsigned *allocPage();
+extern void fatal(char *msg);
 
 /*-------------------------------------------------------------------------
  * Allocation of paging structures:
  */
-struct Pdir* allocPdir() {
-  // Allocate a fresh page directory:
-  struct Pdir* pdir = (struct Pdir*)allocPage();
+struct Pdir *allocPdir() {
+    // Allocate a fresh page directory:
+    struct Pdir *pdir = (struct Pdir *)allocPage();
+    unsigned page_entry = PERMS_KERNELSPACE;
+    unsigned kern_addr = (KERNEL_SPACE >> SUPERSIZE);
 
-  // TODO (Step 5): Add superpage mappings to pdir for the first PHYSMAP
-  // bytes of physical memory.  You should use a bitwise or
-  // operation to ensure that the PERMS_KERNELSPACE bits are set
-  // in every PDE that you create.
+    // TODO (Step 5): Add superpage mappings to pdir for the first PHYSMAP
+    // bytes of physical memory.  You should use a bitwise or
+    // operation to ensure that the PERMS_KERNELSPACE bits are set
+    // in every PDE that you create.
 
-  return pdir;
+    for (unsigned i = 0; i < (PHYSMAP >> SUPERSIZE); ++i) {
+        pdir->pde[i + kern_addr] = (i * (1 << SUPERSIZE)) | PERMS_KERNELSPACE;
+        // pdir->pde[kern_addr + i] = page_entry;
+        // page_entry += (1 << SUPERSIZE);
+    }
+
+    return pdir;
 }
 
-struct Ptab* allocPtab() {
-    return (struct Ptab*)allocPage();
+struct Ptab *allocPtab() {
+    return (struct Ptab *)allocPage();
 }
 
 /*-------------------------------------------------------------------------
@@ -52,15 +60,15 @@ struct Ptab* allocPtab() {
  * virtual address (page) specified by virt to the physical address
  * (page) specified by phys.  Any nonzero offset in the least
  * significant 12 bits of either virt or phys will be ignored.
- * 
+ *
  */
-void mapPage(struct Pdir* pdir, unsigned virt, unsigned phys) {
+void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
     // Mask out the least significant 12 bits of virt and phys.
     virt = alignTo(virt, PAGESIZE);
     phys = alignTo(phys, PAGESIZE);
 
     // Make sure that the virtual address is in user space.
-    if (virt>=KERNEL_SPACE) {
+    if (virt >= KERNEL_SPACE) {
         fatal("virtual address is in kernel space");
     }
 
@@ -89,33 +97,34 @@ void mapPage(struct Pdir* pdir, unsigned virt, unsigned phys) {
 /*-------------------------------------------------------------------------
  * Print a description of a page directory (for debugging purposes).
  */
-void showPdir(struct Pdir* pdir) {
-  printf("  Page directory at %x\n", pdir);
-  for (unsigned i=0; i<1024; i++) {
-    if (pdir->pde[i]&1) {
-      if (pdir->pde[i]&0x80) {
-        printf("    %x: [%x-%x] => [%x-%x], superpage\n",
-               i, (i<<SUPERSIZE), ((i+1)<<SUPERSIZE)-1,
-               alignTo(pdir->pde[i], SUPERSIZE),
-               alignTo(pdir->pde[i], SUPERSIZE) + 0x3fffff);
-      } else {
-        struct Ptab* ptab = fromPhys(struct Ptab*,
-                                     alignTo(pdir->pde[i], PAGESIZE));
-        unsigned base = (i<<SUPERSIZE);
-        printf("    [%x-%x] => page table at %x (physical %x):\n",
-               base, base + (1<<SUPERSIZE)-1,
-               ptab, alignTo(pdir->pde[i], PAGESIZE));
-        for (unsigned j=0; j<1024; j++) {
-          if (ptab->pte[j] & 1) {
-            printf("      %x: [%x-%x] => [%x-%x] page\n",
-                   j, base+(j<<PAGESIZE), base + ((j+1)<<PAGESIZE) - 1,
-                   alignTo(ptab->pte[j], PAGESIZE),
-                   alignTo(ptab->pte[j], PAGESIZE) + 0xfff);
-          }
+void showPdir(struct Pdir *pdir) {
+    printf("  Page directory at %x\n", pdir);
+    for (unsigned i = 0; i < 1024; i++) {
+        if (pdir->pde[i] & 1) {
+            if (pdir->pde[i] & 0x80) {
+                printf("    %x: [%x-%x] => [%x-%x], superpage\n", i,
+                       (i << SUPERSIZE), ((i + 1) << SUPERSIZE) - 1,
+                       alignTo(pdir->pde[i], SUPERSIZE),
+                       alignTo(pdir->pde[i], SUPERSIZE) + 0x3fffff);
+            } else {
+                struct Ptab *ptab =
+                    fromPhys(struct Ptab *, alignTo(pdir->pde[i], PAGESIZE));
+                unsigned base = (i << SUPERSIZE);
+                printf("    [%x-%x] => page table at %x (physical %x):\n", base,
+                       base + (1 << SUPERSIZE) - 1, ptab,
+                       alignTo(pdir->pde[i], PAGESIZE));
+                for (unsigned j = 0; j < 1024; j++) {
+                    if (ptab->pte[j] & 1) {
+                        printf("      %x: [%x-%x] => [%x-%x] page\n", j,
+                               base + (j << PAGESIZE),
+                               base + ((j + 1) << PAGESIZE) - 1,
+                               alignTo(ptab->pte[j], PAGESIZE),
+                               alignTo(ptab->pte[j], PAGESIZE) + 0xfff);
+                    }
+                }
+            }
         }
-      }
     }
-  }
 }
 
 /*-----------------------------------------------------------------------*/
