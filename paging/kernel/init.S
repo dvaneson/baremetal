@@ -72,7 +72,6 @@ entry:	cli			# Turn off interrupts
 
 	movl    $high, %eax             # Make jump into kernel space
 	jmp     *%eax
-.globl high
 high:					# Now running at high addresses
 	leal	stack, %esp		# Set up initial kernel stack
 
