@@ -50,8 +50,8 @@ void fatal(char *msg) {
  * Memory management: simple functionality for allocating pages of
  * memory for use in constructing page tables, etc.
  */
-unsigned physStart; // Set during initialization to start of memory pool
-unsigned physEnd;   // Set during initialization to end of memory pool
+unsigned physStart;  // Set during initialization to start of memory pool
+unsigned physEnd;    // Set during initialization to end of memory pool
 
 unsigned *allocPage() {
     fatal("You have not implemented the allocPage() function (yet)!");
@@ -79,7 +79,7 @@ unsigned *allocPage() {
     // also easy to convert between them using the fromPhys
     // and toPhys macros ...
 
-    return 0; // TODO (Step 4): Replace this placeholder with the proper value
+    return 0;  // TODO (Step 4): Replace this placeholder with the proper value
 }
 
 /*-------------------------------------------------------------------------
@@ -101,7 +101,7 @@ void kernel() {
     setAttr(0x2e);
     cls();
     setAttr(7);
-    setWindow(1, 23, 1, 45); // kernel on left hand side
+    setWindow(1, 23, 1, 45);  // kernel on left hand side
     cls();
     printf("Paging kernel has booted!\n");
 
@@ -173,18 +173,12 @@ void kernel() {
     for (i = 0; i < hdrs[0]; i++) {
         start = hdrs[3 * i + 1];
         end = hdrs[3 * i + 2];
-        if (end < physStart)
-            physStart = end + 1;
-        if (start > physEnd)
-            physEnd = start - 1;
+        if (end < physStart) physStart = end + 1;
+        if (start > physEnd) physEnd = start - 1;
 
         printf("  header[%d] = [%08x-%08x], updated region [%08x-%08x]\n", i,
                start, end, physStart, physEnd);
     }
-
-    printf("\nChosen memory range:\n  [%08x-%08x]\n  %d bytes", physStart,
-           physEnd, physEnd - physStart);
-    halt();
 
     // TODO (Step 3): Report a fatal error if this process ends with
     // an empty region of physical memory.
@@ -193,8 +187,9 @@ void kernel() {
     // region, as well as the total number of bytes that it
     // contains.
 
-    printf("Will allocate from region [%x-%x], %d bytes\n", physStart, physEnd,
-           1 + physEnd - physStart);
+    printf("Will allocate from region [%08x-%08x], %d bytes\n", physStart,
+           physEnd, 1 + physEnd - physStart);
+    halt();
 
     // Now we will build a new page directory:
     struct Pdir *newpdir = allocPdir();
