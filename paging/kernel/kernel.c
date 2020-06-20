@@ -210,9 +210,10 @@ void kernel() {
     // newly created page directory, but who knows what that might
     // be ... ?   :-)
 
+    mapPage(newpdir, 0x12345678, physStart);
     showPdir(newpdir);
     halt();
-
+// #define IM_FEELING_LUCKY 0
 #ifdef IM_FEELING_LUCKY
     setPdir(toPhys(newpdir));
     printf("This message should appear on the screen!\n");

@@ -56,7 +56,7 @@ struct Ptab *allocPtab() {
 /*-------------------------------------------------------------------------
  * Create a mapping in the specified page directory that will map the
  * virtual address (page) specified by virt to the physical address
- * (page) specified by phys.  Any nonzero offset in the least
+ * (page) specified by phys. Any nonzero offset in the least
  * significant 12 bits of either virt or phys will be ignored.
  *
  */
@@ -70,7 +70,23 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
         fatal("virtual address is in kernel space");
     }
 
-    // TODO (Step 7): Find the relevant entry in the page directory
+    // DONE (Step 7): Find the relevant entry in the page directory
+    printf("\nVirt before: %x\n", virt);
+    unsigned pde_index = (virt >> SUPERSIZE);
+    printf("PDE index: %x\n", pde_index);
+    unsigned pte_index = maskTo(virt, SUPERSIZE) >> PAGESIZE;
+    printf("PTE index: %x\n", pte_index);
+    if (pde_index >= PAGEWORDS) {
+        fatal("PDE index out of bounds");
+    } else if (pdir->pde[pde_index] & 1) {
+        if (pdir->pde[pde_index] & PERMS_SUPERPAGE) {
+            fatal("PDE maps to a superpage");
+        } else {
+            struct Ptab *ptab = fromPhys(
+                struct Ptab *, alignTo(pdir->pde[pde_index], PAGESIZE));
+        }
+    } else {
+    }
 
     // TODO (Step 7): report a fatal error if there is already a
     //       superpage mapped at that address (this shouldn't
