@@ -72,27 +72,31 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
     //       be possible at this stage, but we're programming
     //       defensively).
 
+    // DONE (Step 7): If there is no page table (i.e., the PDE is
+    //       empty), then allocate a new page table and update the
+    //       pdir to point to it.   (use PERMS_USER_RW together with
+    //       the new page table's *physical* address for this.)
+
     printf("\nVirt before: %x\n", virt);
     unsigned pde_index = (virt >> SUPERSIZE);
     printf("PDE index: %x\n", pde_index);
     unsigned pte_index = maskTo(virt, SUPERSIZE) >> PAGESIZE;
     printf("PTE index: %x\n", pte_index);
+
+    struct Ptab *ptab = 0;
     if (pde_index >= PAGEWORDS) {
         fatal("PDE index out of bounds");
     } else if (pdir->pde[pde_index] & 1) {
         if (pdir->pde[pde_index] & PERMS_SUPERPAGE) {
             fatal("PDE maps to a superpage");
         } else {
-            struct Ptab *ptab = fromPhys(
-                struct Ptab *, alignTo(pdir->pde[pde_index], PAGESIZE));
+            ptab = fromPhys(struct Ptab *,
+                            alignTo(pdir->pde[pde_index], PAGESIZE));
         }
     } else {
+        ptab = (struct Ptab *)allocPage();
+        pdir->pde[pde_index] = toPhys(ptab) + PERMS_USER_RW;
     }
-
-    // TODO (Step 7): If there is no page table (i.e., the PDE is
-    //       empty), then allocate a new page table and update the
-    //       pdir to point to it.   (use PERMS_USER_RW together with
-    //       the new page table's *physical* address for this.)
 
     // TODO (Step 7): If there was an existing page table (i.e.,
     //       the PDE pointed to a page table), then report a fatal
@@ -112,7 +116,7 @@ void showPdir(struct Pdir *pdir) {
     for (unsigned i = 0; i < 1024; i++) {
         if (pdir->pde[i] & 1) {
             if (pdir->pde[i] & 0x80) {
-                printf("    %x: [%x-%x] => [%x-%x], superpage\n", i,
+                printf("    %3x: [%x-%x] => [%x-%x], superpage\n", i,
                        (i << SUPERSIZE), ((i + 1) << SUPERSIZE) - 1,
                        alignTo(pdir->pde[i], SUPERSIZE),
                        alignTo(pdir->pde[i], SUPERSIZE) + 0x3fffff);
@@ -120,12 +124,12 @@ void showPdir(struct Pdir *pdir) {
                 struct Ptab *ptab =
                     fromPhys(struct Ptab *, alignTo(pdir->pde[i], PAGESIZE));
                 unsigned base = (i << SUPERSIZE);
-                printf("    [%x-%x] => page table at %x (physical %x):\n", base,
-                       base + (1 << SUPERSIZE) - 1, ptab,
+                printf("    %3x: [%x-%x] => page table at %x (physical %x):\n",
+                       i, base, base + (1 << SUPERSIZE) - 1, ptab,
                        alignTo(pdir->pde[i], PAGESIZE));
                 for (unsigned j = 0; j < 1024; j++) {
                     if (ptab->pte[j] & 1) {
-                        printf("      %x: [%x-%x] => [%x-%x] page\n", j,
+                        printf("      %03x: [%x-%x] => [%x-%x] page\n", j,
                                base + (j << PAGESIZE),
                                base + ((j + 1) << PAGESIZE) - 1,
                                alignTo(ptab->pte[j], PAGESIZE),
