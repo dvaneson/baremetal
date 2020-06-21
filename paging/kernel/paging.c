@@ -102,6 +102,7 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
         if (pde & PERMS_SUPERPAGE) {
             fatal("PDE maps to a superpage");
         }
+
         // Clear the lower 12 bits to get the Page Table's physical address
         ptab = fromPhys(struct Ptab *, alignTo(pde, PAGESIZE));
         if (ptab->pte[pte_index] & 1) {
@@ -112,6 +113,7 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
         pdir->pde[pde_index] = toPhys(ptab) + PERMS_USER_RW;
     }
 
+    // The PTE is a 20-bit physical adress with a 12-bit offset
     ptab->pte[pte_index] = phys + PERMS_USER_RW;
 }
 
