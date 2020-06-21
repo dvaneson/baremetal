@@ -138,7 +138,7 @@ void showPdir(struct Pdir *pdir) {
                        alignTo(pdir->pde[i], PAGESIZE));
                 for (unsigned j = 0; j < 1024; j++) {
                     if (ptab->pte[j] & 1) {
-                        printf("      %03x: [%x-%x] => [%x-%x] page\n", j,
+                        printf("      %3x: [%x-%x] => [%x-%x] page\n", j,
                                base + (j << PAGESIZE),
                                base + ((j + 1) << PAGESIZE) - 1,
                                alignTo(ptab->pte[j], PAGESIZE),

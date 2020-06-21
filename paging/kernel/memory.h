@@ -26,11 +26,11 @@
 
 // Need these defines to prevent IDE error messages
 #ifndef KERNEL_SPACE
-#define KERNEL_SPACE 0
+#define KERNEL_SPACE 0xc0000000
 #endif
 
 #ifndef KERNEL_LOAD
-#define KERNEL_LOAD 0
+#define KERNEL_LOAD 0x00100000
 #endif
 
 /*-------------------------------------------------------------------------

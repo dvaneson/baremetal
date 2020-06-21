@@ -206,18 +206,14 @@ void kernel() {
     // Now we will build a new page directory:
     struct Pdir *newpdir = allocPdir();
 
-    // TODO (Step 8): You might need to do something more to the
+    // DONE (Step 8): You might need to do something more to the
     // newly created page directory, but who knows what that might
     // be ... ?   :-)
 
-    mapPage(newpdir, 0x12345678, physStart);
+    // oxb8000 is video ram and thus gives access to printf
+    mapPage(newpdir, 0xb8000, 0xb8000);
     showPdir(newpdir);
-    mapPage(newpdir, 0x12345678, physStart);
-    showPdir(newpdir);
-    // mapPage(newpdir, KERNEL_SPACE, physStart);
-    // showPdir(newpdir);
-    halt();
-// #define IM_FEELING_LUCKY 0
+#define IM_FEELING_LUCKY 0
 #ifdef IM_FEELING_LUCKY
     setPdir(toPhys(newpdir));
     printf("This message should appear on the screen!\n");
