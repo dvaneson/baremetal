@@ -88,9 +88,9 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
 
     unsigned pde_index = (virt >> SUPERSIZE);
     unsigned pte_index = maskTo(virt, SUPERSIZE) >> PAGESIZE;
-    printf("\nVirt before: %x\n", virt);
-    printf("PDE index: %x\n", pde_index);
-    printf("PTE index: %x\n", pte_index);
+    // printf("\nVirt before: %x\n", virt);
+    // printf("PDE index: %x\n", pde_index);
+    // printf("PTE index: %x\n", pte_index);
 
     if (pde_index >= PAGEWORDS) {
         fatal("PDE index out of bounds");
@@ -138,7 +138,7 @@ void showPdir(struct Pdir *pdir) {
                        alignTo(pdir->pde[i], PAGESIZE));
                 for (unsigned j = 0; j < 1024; j++) {
                     if (ptab->pte[j] & 1) {
-                        printf("      %3x: [%x-%x] => [%x-%x] page\n", j,
+                        printf("        %3x: [%x-%x] => [%x-%x] page\n", j,
                                base + (j << PAGESIZE),
                                base + ((j + 1) << PAGESIZE) - 1,
                                alignTo(ptab->pte[j], PAGESIZE),
