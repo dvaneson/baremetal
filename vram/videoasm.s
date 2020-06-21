@@ -20,7 +20,7 @@
 	.align	4
 video:	.space	SCREENBYTES
 
-        # Some variables to hold the current row, column, and
+    # Some variables to hold the current row, column, and
 	# video attribute:
 	.align	4
 row:	.long	0		# we will only use the least significant
@@ -30,11 +30,27 @@ attr:	.long	0
 	.text
 
 	# Clear the screen, setting all characters to SPACE
-        # using the DEFAULT_ATTR attribute.
+    # using the DEFAULT_ATTR attribute.
 	.globl	cls
 cls:	pushl	%ebp
 	movl	%esp, %ebp
-	# Fill me in!
+
+	leal video, %eax
+	movl $(SCREENBYTES >> 2), %ecx	# Counter. Moving longs, so count = SCREENBYTES / 4
+
+	# Set %edx such that the first 16-bits and last 16-bits specify a green space
+	movb $(SPACE), %dl
+	movb $(DEFAULT_ATTR), %dh
+	shl  $16, %edx
+	movb $(SPACE), %dl
+	movb $(DEFAULT_ATTR), %dh
+
+	# Loop over video array, setting 4 bytes at a time
+1:	movl %edx, (%eax)
+	addl $4, %eax
+	decl %ecx
+	jnz 1b
+
 	movl	%ebp, %esp
 	popl	%ebp
 	ret
@@ -51,7 +67,7 @@ setAttr:pushl	%ebp
 	# Output a single character at the current row and col position
 	# on screen, advancing the cursor coordinates and scrolling the
 	# screen as appropriate.  Special treatment is provided for
-        # NEWLINE characters, moving the "cursor" to the start of the
+    # NEWLINE characters, moving the "cursor" to the start of the
 	# "next line".
 	.globl	outc
 outc:	pushl	%ebp
