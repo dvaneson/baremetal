@@ -59,7 +59,10 @@ cls:	pushl	%ebp
 	.globl	setAttr
 setAttr:pushl	%ebp
 	movl	%esp, %ebp
-	# Fill me in!
+
+	movl	8(%ebp), %eax
+	movl	%eax, attr
+
 	movl	%ebp, %esp
 	popl	%ebp
 	ret
@@ -74,8 +77,29 @@ outc:	pushl	%ebp
 	movl	%esp, %ebp
 	pushl 	%edi
 
-	# Loop through each row except the last, replacing the current row with the next
 	leal video, %eax
+	movb 8(%ebp), %dl
+	cmpb $(NEWLINE), %dl
+	je newline
+
+	movl $(COLS), %ecx
+	imull	row, %ecx
+	addl col, %ecx
+	movb attr, %dh
+	movw %dx, (%eax, %ecx, 2)
+	incl col
+	cmpl $(COLS), col
+	jl outc_end
+
+newline:
+	movl 	$0, col
+	incl 	row
+	cmpl 	$(ROWS), row
+	jl 		outc_end
+	decl	row
+
+scroll:
+	# Loop through each row except the last, replacing the current row with the next
 	leal (ROWBYTES)(%eax), %edx				# Set %edx to the row right after %eax
 	movl $(((ROWS-1) * COLS) >> 1), %ecx 	# Counter for number of rows to update, aside from the last one
 
@@ -100,6 +124,7 @@ outc:	pushl	%ebp
 	decl %ecx
 	jnz 1b
 
+outc_end:
 	popl 	%edi
 	movl	%ebp, %esp
 	popl	%ebp
