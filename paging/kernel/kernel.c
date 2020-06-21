@@ -225,12 +225,11 @@ void kernel() {
 
     setPdir(toPhys(newpdir));
     printf("Set new Page Directory\n");
-    // TODO: reinstate the following code ... but we'll get to that
-    // next time!
-    // printf("user code is at 0x%x\n", hdrs[9]);
-    // initContext(&user, hdrs[9], 0);
-    // printf("user is at %x\n", (unsigned)(&user));
-    // switchToUser(&user);
+
+    printf("user code is at 0x%x\n", hdrs[9]);
+    initContext(&user, hdrs[9], 0);
+    printf("user is at %x\n", (unsigned)(&user));
+    switchToUser(&user);
 
     printf("The kernel will now halt!\n");
     halt();
