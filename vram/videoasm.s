@@ -72,7 +72,35 @@ setAttr:pushl	%ebp
 	.globl	outc
 outc:	pushl	%ebp
 	movl	%esp, %ebp
-	# Fill me in!
+	pushl 	%edi
+
+	# Loop through each row except the last, replacing the current row with the next
+	leal video, %eax
+	leal (ROWBYTES)(%eax), %edx				# Set %edx to the row right after %eax
+	movl $(((ROWS-1) * COLS) >> 1), %ecx 	# Counter for number of rows to update, aside from the last one
+
+1:	movl (%edx), %edi
+	movl %edi, (%eax)
+	addl $4, %eax
+	addl $4, %edx
+	decl %ecx
+	jnz 1b
+
+	# Loop through the last row, updating each col to a green space
+	movb $(SPACE), %dl
+	movb $(DEFAULT_ATTR), %dh
+	shl  $16, %edx
+	movb $(SPACE), %dl
+	movb $(DEFAULT_ATTR), %dh
+	movl $(ROWBYTES >> 2), %ecx		# Counter for number of double words in a row
+
+	
+1:  movl %edx, (%eax)
+	addl $4, %eax
+	decl %ecx
+	jnz 1b
+
+	popl 	%edi
 	movl	%ebp, %esp
 	popl	%ebp
 	ret
