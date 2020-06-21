@@ -65,12 +65,13 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
     virt = alignTo(virt, PAGESIZE);
     phys = alignTo(phys, PAGESIZE);
 
-    // Make sure that the virtual address is in user space.
-    if (virt >= KERNEL_SPACE) {
-        fatal("virtual address is in kernel space");
-    }
-
     // DONE (Step 7): Find the relevant entry in the page directory
+
+    // DONE (Step 7): report a fatal error if there is already a
+    //       superpage mapped at that address (this shouldn't
+    //       be possible at this stage, but we're programming
+    //       defensively).
+
     printf("\nVirt before: %x\n", virt);
     unsigned pde_index = (virt >> SUPERSIZE);
     printf("PDE index: %x\n", pde_index);
@@ -87,11 +88,6 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
         }
     } else {
     }
-
-    // TODO (Step 7): report a fatal error if there is already a
-    //       superpage mapped at that address (this shouldn't
-    //       be possible at this stage, but we're programming
-    //       defensively).
 
     // TODO (Step 7): If there is no page table (i.e., the PDE is
     //       empty), then allocate a new page table and update the

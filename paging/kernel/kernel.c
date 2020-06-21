@@ -212,6 +212,8 @@ void kernel() {
 
     mapPage(newpdir, 0x12345678, physStart);
     showPdir(newpdir);
+    mapPage(newpdir, KERNEL_SPACE, physStart);
+    showPdir(newpdir);
     halt();
 // #define IM_FEELING_LUCKY 0
 #ifdef IM_FEELING_LUCKY
