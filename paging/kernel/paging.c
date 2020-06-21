@@ -92,19 +92,20 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
     printf("PDE index: %x\n", pde_index);
     printf("PTE index: %x\n", pte_index);
 
-    struct Ptab *ptab = 0;
     if (pde_index >= PAGEWORDS) {
         fatal("PDE index out of bounds");
-    } else if (pdir->pde[pde_index] & 1) {
-        if (pdir->pde[pde_index] & PERMS_SUPERPAGE) {
+    }
+
+    struct Ptab *ptab = 0;
+    unsigned pde = pdir->pde[pde_index];
+    if (pde & 1) {
+        if (pde & PERMS_SUPERPAGE) {
             fatal("PDE maps to a superpage");
-        } else {
-            // Clear the lower 12 bits to get the Page Table's physical address
-            unsigned ptab_phys = alignTo(pdir->pde[pde_index], PAGESIZE);
-            ptab = fromPhys(struct Ptab *, ptab_phys);
-            if (ptab->pte[pte_index] & 1) {
-                fatal("PTE already mapped to a physical address");
-            }
+        }
+        // Clear the lower 12 bits to get the Page Table's physical address
+        ptab = fromPhys(struct Ptab *, alignTo(pde, PAGESIZE));
+        if (ptab->pte[pte_index] & 1) {
+            fatal("PTE already mapped to a physical address");
         }
     } else {
         ptab = (struct Ptab *)allocPage();
