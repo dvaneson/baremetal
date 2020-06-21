@@ -86,10 +86,10 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
     //       again, this time combined with the value of the
     //       phys parameter that was supplied as an input.)
 
-    printf("\nVirt before: %x\n", virt);
     unsigned pde_index = (virt >> SUPERSIZE);
-    printf("PDE index: %x\n", pde_index);
     unsigned pte_index = maskTo(virt, SUPERSIZE) >> PAGESIZE;
+    printf("\nVirt before: %x\n", virt);
+    printf("PDE index: %x\n", pde_index);
     printf("PTE index: %x\n", pte_index);
 
     struct Ptab *ptab = 0;
