@@ -206,27 +206,31 @@ void kernel() {
     // Now we will build a new page directory:
     struct Pdir *newpdir = allocPdir();
 
-    // DONE (Step 8): You might need to do something more to the
-    // newly created page directory, but who knows what that might
-    // be ... ?   :-)
-
-    // oxb8000 is video ram and thus gives access to printf
+    // Updating the Page Directory means losing the lower address mappings, so
+    // they must be re-mapped
+    // 0xb8000 is video ram and thus gives access to
+    // 0x1000 is where to find the boot data
     mapPage(newpdir, 0xb8000, 0xb8000);
-    showPdir(newpdir);
-#define IM_FEELING_LUCKY 0
-#ifdef IM_FEELING_LUCKY
-    setPdir(toPhys(newpdir));
-    printf("This message should appear on the screen!\n");
-#else
-    printf("Switch to the new page directory when you're ready!\n");
-#endif
+    mapPage(newpdir, 0x1000, 0x1000);
 
+    printf("\nhdrs[7] = %x\nhdrs[8] = %x\n\n", hdrs[7], hdrs[8]);
+
+    start = pageStart(hdrs[7]);
+    end = pageEnd(hdrs[8]);
+    while (start < end) {
+        mapPage(newpdir, start, start);
+        start = pageNext(start);
+    }
+    showPdir(newpdir);
+
+    setPdir(toPhys(newpdir));
+    printf("Set new Page Directory\n");
     // TODO: reinstate the following code ... but we'll get to that
     // next time!
-    // printf("user code is at 0x%x\n", hdrs[9]);
-    // initContext(&user, hdrs[9], 0);
-    // printf("user is at %x\n", (unsigned)(&user));
-    // switchToUser(&user);
+    printf("user code is at 0x%x\n", hdrs[9]);
+    initContext(&user, hdrs[9], 0);
+    printf("user is at %x\n", (unsigned)(&user));
+    switchToUser(&user);
 
     printf("The kernel will now halt!\n");
     halt();
