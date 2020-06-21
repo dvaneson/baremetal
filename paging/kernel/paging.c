@@ -77,6 +77,15 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
     //       pdir to point to it.   (use PERMS_USER_RW together with
     //       the new page table's *physical* address for this.)
 
+    // DONE (Step 7): If there was an existing page table (i.e.,
+    //       the PDE pointed to a page table), then report a fatal
+    //       error if the specific entry we want is already in use.
+
+    // DONE (Step 7): Add an entry in the page table structure to
+    //       complete the mapping of virt to phys.  (Use PERMS_USER_RW
+    //       again, this time combined with the value of the
+    //       phys parameter that was supplied as an input.)
+
     printf("\nVirt before: %x\n", virt);
     unsigned pde_index = (virt >> SUPERSIZE);
     printf("PDE index: %x\n", pde_index);
@@ -90,22 +99,19 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
         if (pdir->pde[pde_index] & PERMS_SUPERPAGE) {
             fatal("PDE maps to a superpage");
         } else {
-            ptab = fromPhys(struct Ptab *,
-                            alignTo(pdir->pde[pde_index], PAGESIZE));
+            // Clear the lower 12 bits to get the Page Table's physical address
+            unsigned ptab_phys = alignTo(pdir->pde[pde_index], PAGESIZE);
+            ptab = fromPhys(struct Ptab *, ptab_phys);
+            if (ptab->pte[pte_index] & 1) {
+                fatal("PTE already mapped to a physical address");
+            }
         }
     } else {
         ptab = (struct Ptab *)allocPage();
         pdir->pde[pde_index] = toPhys(ptab) + PERMS_USER_RW;
     }
 
-    // TODO (Step 7): If there was an existing page table (i.e.,
-    //       the PDE pointed to a page table), then report a fatal
-    //       error if the specific entry we want is already in use.
-
-    // TODO (Step 7): Add an entry in the page table structure to
-    //       complete the mapping of virt to phys.  (Use PERMS_USER_RW
-    //       again, this time combined with the value of the
-    //       phys parameter that was supplied as an input.)
+    ptab->pte[pte_index] = phys + PERMS_USER_RW;
 }
 
 /*-------------------------------------------------------------------------
