@@ -40,7 +40,7 @@ void cmain() {
         puts("hello, user2 console\n");
         yield();
     }
-    puts("\n\nUser code does not return\n");
+    puts("\n\nUser2 code does not return\n");
     for (;;) { /* Don't return! */
     }
     puts("This message won't appear!\n");
