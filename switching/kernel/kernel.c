@@ -18,8 +18,11 @@
     <https://www.gnu.org/licenses/>.
 */
 #include "context.h"
+#include "hardware.h"
 #include "mimguser.h"
 #include "simpleio.h"
+
+extern void initPIC();
 
 /* Initialize a context with specified eip and esp values.
  */
@@ -75,8 +78,11 @@ void kernel() {
     printf("user2 code is at 0x%x\n", hdrs[12]);
     initContext(user + 1, hdrs[12], 0);
 
-    current = user + 1;
+    current = user + 0;
     printf("Current user is at %x\n", (unsigned)(current));
+
+    initPIC();
+    startTimer();
     switchToUser(current);
     printf("This message shouldn't appear!\n");
 }
@@ -91,5 +97,21 @@ void kputc_imp() { /* A trivial system call */
 
 void yield_imp() {
     printf("Yielding... ");
+    // current = (current == user) ? (user + 1) : user;
+    switchToUser(current);
+}
+
+static void tick() {
+    static unsigned ticks = 0;
+    ticks++;
+    if ((ticks & 15) == 0) {
+        current = (current == user) ? (user + 1) : user;
+    }
+}
+
+void timerInterrupt() {
+    maskAckIRQ(TIMERIRQ);
+    enableIRQ(TIMERIRQ);
+    tick();
     switchToUser(current);
 }

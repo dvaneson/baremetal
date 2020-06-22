@@ -9,13 +9,16 @@ all: kernel
 # A simple protected mode kernel that switches back and forth
 # between user and kernel mode when a system call is invoked.
 
-KOBJS   = init.o kernel.o
+KOBJS   = init.o initpic.o kernel.o
 kernel: ${KOBJS} kernel.ld
 	$(LD) -T kernel.ld -o kernel ${KOBJS} ${LIBPATH} --print-map > kernel.map
 	strip kernel
 
 init.o: init.s
 	$(CC) -Wa,-alsm=init.lst -c -o init.o init.s
+
+initpic.o: initpic.s
+	$(CC) -Wa,-alsm=init.lst -c -o initpic.o initpic.s
 
 kernel.o: kernel.c
 	$(CC) ${CCOPTS} ${INCPATH} -o kernel.o -c kernel.c

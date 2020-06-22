@@ -36,11 +36,16 @@ void cmain() {
     cls();
     puts("in user2 code\n");
     for (i = 0; i < 4; i++) {
-        kputs("hello, kernel console\n");
-        puts("hello, user2 console\n");
-        yield();
+        kputs("hello, from user2\n");
+        printf("%3d: hello, user2 console\n", i);
+        // yield();
     }
     puts("\n\nUser2 code does not return\n");
+
+    unsigned *flagAddr = (unsigned *)0x402710;
+    printf("flagAddr = 0x%x\n", flagAddr);
+    *flagAddr = 1234;
+
     for (;;) { /* Don't return! */
     }
     puts("This message won't appear!\n");

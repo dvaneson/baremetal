@@ -31,16 +31,24 @@ void kputs(char *s) {
 }
 
 void cmain() {
+    volatile unsigned flag = 0;
     int i;
     setWindow(1, 11, 47, 32); // user1 process on upper right hand side
     cls();
     puts("in user1 code\n");
     for (i = 0; i < 4; i++) {
-        kputs("hello, kernel console\n");
-        puts("hello, user1 console\n");
-        yield();
+        kputs("hello, from user1\n");
+        printf("%3d: hello, user1 console\n", i);
+        // yield();
     }
     puts("\n\nUser1 code does not return\n");
+
+    printf("My flag is at 0x%x\n", &flag);
+    while (flag == 0) {
+        /* do nothing */
+    }
+    printf("Somebody set my flag to %d!\n", flag);
+
     for (;;) { /* Don't return! */
     }
     puts("This message won't appear!\n");
