@@ -15,7 +15,8 @@ image:
 		noload:../mimg/mimgload \
 		bootdata:0x1000-0x3fff \
 		kernel/kernel \
-		user/user
+		user/user \
+		user/user2
 
 #----------------------------------------------------------------------------
 # tidy up after ourselves ...

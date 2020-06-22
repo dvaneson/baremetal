@@ -46,7 +46,10 @@ void kernel() {
     unsigned *hdrs = bd->headers;
     unsigned *mmap = bd->mmap;
     unsigned i;
-    setWindow(2, 22, 0, 45); // kernel on left hand side
+    setAttr(0x2e); // Create a PSU Green border
+    cls();
+    setWindow(1, 23, 1, 45); // kernel on left hand side
+    setAttr(7);
     cls();
     printf("Protected kernel has booted!\n");
 
