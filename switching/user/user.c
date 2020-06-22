@@ -22,6 +22,7 @@
 #include "simpleio.h"
 
 extern void kputc(unsigned);
+extern void yield(void);
 
 void kputs(char *s) {
     while (*s) {
@@ -37,6 +38,7 @@ void cmain() {
     for (i = 0; i < 4; i++) {
         kputs("hello, kernel console\n");
         puts("hello, user console\n");
+        yield();
     }
     puts("\n\nUser code does not return\n");
     for (;;) { /* Don't return! */

@@ -15,3 +15,8 @@ kputc:	pushl	%eax
 	popl	%eax
 	ret
 
+	# System call to check that hlt will not work for a user program
+	.globl	yield
+yield:	int $0x81
+	ret
+

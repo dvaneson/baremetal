@@ -241,6 +241,7 @@ initIDT:# Add descriptors for exception & interrupt handlers:
         # user mode without generating a general protection fault, so they
         # will be tagged with dpl=3
 	idtcalc	handler=kputc, slot=0x80, dpl=3
+	idtcalc	handler=yield, slot=0x81, dpl=3
 
 	# Install the new IDT:
 	lidt	idtptr
@@ -322,6 +323,16 @@ kputc:	subl	$4, %esp	# Fake an error code
 	pusha			# Save registers
 	leal	stack, %esp	# Switch to kernel stack
 	jmp	kputc_imp
+
+
+yield:	subl	$4, %esp	# Fake an error code
+	push	%gs		# Save segments
+	push	%fs
+	push	%es
+	push	%ds
+	pusha			# Save registers
+	leal	stack, %esp	# Switch to kernel stack
+	jmp	yield_imp
 
 #--------------------------------------------------------------------------
 # Switch to user mode:  Takes a single parameter, which provides the
