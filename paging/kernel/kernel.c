@@ -22,6 +22,7 @@
  * Mark P Jones + Donovan Ellison, Portland State University
  *-----------------------------------------------------------------------*/
 #include "context.h"
+#include "hardware.h"
 #include "memory.h"
 #include "mimguser.h"
 #include "paging.h"
@@ -45,29 +46,6 @@ unsigned physStart; // Set during initialization to start of memory pool
 unsigned physEnd;   // Set during initialization to end of memory pool
 
 unsigned *allocPage() {
-    // DONE (Step 4): Allocate a page of data, starting at
-    // the physical address that is specified by physStart,
-    // but returning a pointer to the region in virtual
-    // memory. The implementation should:
-    //   + Trigger a fatal error if there is not enough
-    //     space left in [physStart .. physEnd)
-    //   + Write zero in to every byte (or word, for a
-    //     more efficient implementation) of the page
-    //     before returning a pointer.
-    //   + Update physStart so that it points to the
-    //     next available page in memory after the
-    //     allocation is complete ...
-    // Be very careful to distinguish between places in your
-    // code where you are referring to physical addresses
-    // (often using unsigned values, like the value of the
-    // variable physStart) and places where you are referring
-    // to virtual addresses (often using a variable with a
-    // pointer type, for example when you are writing zero
-    // bytes in to memory).  It is very easy to consfuse
-    // these different kinds of address, but at least it is
-    // also easy to convert between them using the fromPhys
-    // and toPhys macros ...
-
     unsigned *page = 0;
 
     // Trigger a fatal error if there is not enough space left
@@ -131,23 +109,8 @@ void kernel() {
 
     printf("kernel code is at 0x%x\n", kernel);
 
-    // DONE (Step 3): Scan the memory map to find the biggest region of
-    // available pages subject to the constraints:
-    //  - The start address (which should be stored in physStart)
-    //    must have a zero page offset and must be >= KERNEL_LOAD,
-    //    the address at which the kernel is loaded.
-    //  - The end address (which should be stored in physEnd) must
-    //    have an offset of 0xfff (i.e., corresponding to the last
-    //    byte in a page); it must be greater than physStart; and
-    //    it must be less than PHYSMAP.  (It cannot be equal to
-    //    PHYSMAP because PHYSMAP has zero offset.)
-    // By all means include some printf() calls in your code so
-    // that you can trace its execution and be comfortable that
-    // it is working correctly.
-
     physStart = 0;
     physEnd = 0;
-    printf("\nConsidering:\n");
     for (i = 0; i < mmap[0]; i++) {
         start = firstPageAfter(mmap[2 * i + 1]);
         end = endPageBefore(mmap[2 * i + 2]);
@@ -162,21 +125,9 @@ void kernel() {
         }
     }
 
-    // DONE (Step 3): Report a fatal error if there is no suitable
-    // region of memory.
-
     if (physEnd <= physStart) {
         fatal("Could not find a valid region in memory map for pages.");
     }
-
-    printf("\nChosen region [%08x-%08x]\n", physStart, physEnd);
-
-    // DONE (Step 3): Scan the list of headers for loaded regions of
-    // memory to look for conflicts with the [physStart..physEnd)
-    // region.  If you find a conflict, increase physStart to point
-    // to the start of the first page after the conflicting region.
-
-    printf("\nHeader conflicts:\n");
     for (i = 0; i < hdrs[0]; i++) {
         start = hdrs[3 * i + 1];
         end = hdrs[3 * i + 2];
@@ -184,24 +135,11 @@ void kernel() {
             physStart = firstPageAfter(end + 1);
         if (start > physStart && start < physEnd)
             physEnd = endPageBefore(start - 1);
-
-        printf("  header[%d] = [%08x-%08x], updated region [%08x-%08x]\n", i,
-               start, end, physStart, physEnd);
     }
-
-    // DONE (Step 3): Report a fatal error if this process ends with
-    // an empty region of physical memory.
 
     if (physEnd <= physStart) {
         fatal("After shrinking region for headers, region is invalid");
     }
-
-    // Display the upper and lower bounds of the chosen memory
-    // region, as well as the total number of bytes that it
-    // contains.
-
-    printf("\nWill allocate from region [%08x-%08x], %d bytes\n", physStart,
-           physEnd, 1 + physEnd - physStart);
 
     // Now we will build a new page directory:
     struct Pdir *newpdir = allocPdir();
@@ -213,8 +151,6 @@ void kernel() {
     mapPage(newpdir, 0xb8000, 0xb8000);
     mapPage(newpdir, 0x1000, 0x1000);
 
-    printf("\nhdrs[7] = %x\nhdrs[8] = %x\n\n", hdrs[7], hdrs[8]);
-
     start = pageStart(hdrs[7]);
     end = pageEnd(hdrs[8]);
     while (start < end) {
@@ -222,13 +158,13 @@ void kernel() {
         start = pageNext(start);
     }
     showPdir(newpdir);
-
     setPdir(toPhys(newpdir));
-    printf("Set new Page Directory\n");
 
     printf("user code is at 0x%x\n", hdrs[9]);
     initContext(&user, hdrs[9], 0);
     printf("user is at %x\n", (unsigned)(&user));
+
+    startTimer();
     switchToUser(&user);
 
     printf("The kernel will now halt!\n");
@@ -237,6 +173,22 @@ void kernel() {
 
 void kputc_imp() { /* A trivial system call */
     putchar(user.regs.eax);
+    switchToUser(&user);
+}
+
+static void tick() {
+    static unsigned ticks = 0;
+    ticks++;
+    if ((ticks & 15) == 0) {
+        printf(".");
+        // current = (current == user) ? (user + 1) : user;
+    }
+}
+
+void timerInterrupt() {
+    maskAckIRQ(TIMERIRQ);
+    enableIRQ(TIMERIRQ);
+    tick();
     switchToUser(&user);
 }
 

@@ -288,12 +288,13 @@ initIDT:# Add descriptors for exception & interrupt handlers:
 	# Add descriptors for hardware irqs:
         .equ    IRQ_BASE,   0x20        # lowest hw irq number
 
-        #intr    $IRQ_BASE, timerInterrupt
+        # intr    $IRQ_BASE, timerInterrupt
 
 	# Add descriptors for system calls:
         # These are the only idt entries that we will allow to be called from
         # user mode without generating a general protection fault, so they
         # will be tagged with dpl=3
+	idtcalc	handler=timerHandler, slot=32
 	idtcalc	handler=kputc, slot=0x80, dpl=3
 
 	# Install the new IDT:
@@ -427,6 +428,16 @@ kputc:	subl	$4, %esp	# Fake an error code
 	pusha			# Save registers
 	leal	stack, %esp	# Switch to kernel stack
 	jmp	kputc_imp
+
+timerHandler:
+	sub     $4, %esp
+	push    %gs
+	push    %fs
+	push    %es
+	push    %ds
+	pusha
+	leal    stack, %esp
+	jmp     timerInterrupt
 
 #--------------------------------------------------------------------------
 # Switch to user mode:  Takes a single parameter, which provides the
