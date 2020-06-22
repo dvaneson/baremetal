@@ -39,7 +39,9 @@ void initContext(struct Context *ctxt, unsigned eip, unsigned esp) {
     ctxt->iret.eflags = INIT_USER_FLAGS;
 }
 
-struct Context user;
+// struct Context user;
+struct Context user[2];
+struct Context *current;
 
 void kernel() {
     struct BootData *bd = (struct BootData *)0x1000;
@@ -68,10 +70,14 @@ void kernel() {
     printf(" cmdline: %s [%x]\n", bd->cmdline, bd->cmdline);
     printf(" imgline: %s [%x]\n", bd->imgline, bd->imgline);
 
-    printf("user code is at 0x%x\n", hdrs[9]);
-    initContext(&user, hdrs[9], 0);
-    printf("user is at %x\n", (unsigned)(&user));
-    switchToUser(&user);
+    printf("user1 code is at 0x%x\n", hdrs[9]);
+    initContext(user + 0, hdrs[9], 0);
+    printf("user2 code is at 0x%x\n", hdrs[12]);
+    initContext(user + 1, hdrs[12], 0);
+
+    current = user + 1;
+    printf("Current user is at %x\n", (unsigned)(current));
+    switchToUser(current);
     printf("This message shouldn't appear!\n");
 }
 
@@ -79,11 +85,11 @@ void kputc_imp() { /* A trivial system call */
                    /*printf("We made it back into the kernel :-)\n");*/
                    /*printf("eax=%x, ebx=%x, retaddr=%x, esp=%x\n",
                             user.regs.eax, user.regs.ebx, user.iret.eip, user.iret.esp);*/
-    putchar(user.regs.eax);
-    switchToUser(&user);
+    putchar(current->regs.eax);
+    switchToUser(current);
 }
 
 void yield_imp() {
-    printf("Yielding ...");
-    switchToUser(&user);
+    printf("Yielding... ");
+    switchToUser(current);
 }

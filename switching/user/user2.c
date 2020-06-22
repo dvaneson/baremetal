@@ -34,7 +34,7 @@ void cmain() {
     int i;
     setWindow(13, 11, 47, 32); // user2 process on lower right hand side
     cls();
-    puts("in user code\n");
+    puts("in user2 code\n");
     for (i = 0; i < 4; i++) {
         kputs("hello, kernel console\n");
         puts("hello, user2 console\n");
