@@ -8,13 +8,13 @@ include Makefile.common
 # remove the leading "#" symbol) from the appropriate line below and make
 # sure that all of the other options are commented out):
 
-BOOT = hello
+#BOOT = hello
 #BOOT = bootinfo
 #BOOT = example-mimg
 #BOOT = example-gdt
 #BOOT = example-idt
 #BOOT = switching
-#BOOT = paging
+BOOT = paging
 #BOOT = pork
 #BOOT = caps
 
@@ -27,8 +27,8 @@ run:	libs
 libs:
 	make -C simpleio
 	make -C mimg
-	make -C userio
-	make -C winio
+	# make -C userio
+	# make -C winio
 
 clean:
 	make -C hello              clean
@@ -41,6 +41,6 @@ clean:
 	make -C switching          clean
 	make -C paging             clean
 	make -C pork               clean
-	make -C caps               clean
+	# make -C caps               clean
 
 #----------------------------------------------------------------------------

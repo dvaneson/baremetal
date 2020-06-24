@@ -75,9 +75,9 @@ struct Context user;
  * The main "kernel" code:
  */
 void kernel() {
-    struct BootData *bd = (struct BootData *)0x1000;
-    unsigned *hdrs = bd->headers;
-    unsigned *mmap = bd->mmap;
+    struct BootData *bd = fromPhys(struct BootData *, 0x1000);
+    unsigned *hdrs = fromPhys(unsigned *, (unsigned)bd->headers);
+    unsigned *mmap = fromPhys(unsigned *, (unsigned)bd->mmap);
     unsigned i;
     unsigned start, end;
 

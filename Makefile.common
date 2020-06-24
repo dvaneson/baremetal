@@ -1,7 +1,7 @@
 #----------------------------------------------------------------------------
 CCOPTS    = -std=gnu99 -O -Wall -nostdlib -nostdinc -Winline \
 	    -nostartfiles -nodefaultlibs -fno-builtin -fomit-frame-pointer \
-	    -fno-stack-protector -freg-struct-return
+	    -fno-stack-protector -freg-struct-return -fno-pic
 
 CC	  = gcc -m32
 LD        = ld -melf_i386
