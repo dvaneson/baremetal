@@ -5,6 +5,7 @@
 *.zip
 *.gz
 *.iso
+grub.cfg
 mimgload
 twiddletests
 bootinfo/bootinfo
