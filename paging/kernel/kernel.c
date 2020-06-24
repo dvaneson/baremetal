@@ -69,7 +69,11 @@ unsigned *allocPage() {
  * Context data structures: a place holder for when we get back to
  * context switching ...
  */
-struct Context user;
+struct Process {
+    struct Context ctxt;
+    struct Pdir *pdir;
+};
+struct Process proc;
 
 /*-------------------------------------------------------------------------
  * The main "kernel" code:
@@ -142,38 +146,38 @@ void kernel() {
     }
 
     // Now we will build a new page directory:
-    struct Pdir *newpdir = allocPdir();
+    proc.pdir = allocPdir();
 
     // Updating the Page Directory means losing the lower address mappings, so
     // they must be re-mapped
     // 0xb8000 is video ram
     // 0x1000 is where to find the boot data
-    mapPage(newpdir, 0xb8000, 0xb8000);
-    mapPage(newpdir, 0x1000, 0x1000);
+    mapPage(proc.pdir, 0xb8000, 0xb8000);
+    mapPage(proc.pdir, 0x1000, 0x1000);
 
     start = pageStart(hdrs[7]);
     end = pageEnd(hdrs[8]);
     while (start < end) {
-        mapPage(newpdir, start, start);
+        mapPage(proc.pdir, start, start);
         start = pageNext(start);
     }
-    showPdir(newpdir);
-    setPdir(toPhys(newpdir));
+    showPdir(proc.pdir);
+    setPdir(toPhys(proc.pdir));
 
     printf("user code is at 0x%x\n", hdrs[9]);
-    initContext(&user, hdrs[9], 0);
-    printf("user is at %x\n", (unsigned)(&user));
+    initContext(&proc.ctxt, hdrs[9], 0);
+    printf("user is at %x\n", (unsigned)(&proc.ctxt));
 
     startTimer();
-    switchToUser(&user);
+    switchToUser(&proc.ctxt);
 
     printf("The kernel will now halt!\n");
     halt();
 }
 
 void kputc_imp() { /* A trivial system call */
-    putchar(user.regs.eax);
-    switchToUser(&user);
+    putchar(proc.ctxt.regs.eax);
+    switchToUser(&proc.ctxt);
 }
 
 static void tick() {
@@ -189,7 +193,7 @@ void timerInterrupt() {
     maskAckIRQ(TIMERIRQ);
     enableIRQ(TIMERIRQ);
     tick();
-    switchToUser(&user);
+    switchToUser(&proc.ctxt);
 }
 
 /*-----------------------------------------------------------------------*/
