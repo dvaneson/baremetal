@@ -46,16 +46,14 @@ unsigned physStart; // Set during initialization to start of memory pool
 unsigned physEnd;   // Set during initialization to end of memory pool
 
 unsigned *allocPage() {
-    unsigned *page = 0;
-
     // Trigger a fatal error if there is not enough space left
     if (physEnd < pageEnd(physStart)) {
         fatal("Could not allocate a page of data, not enough memory.");
     }
 
     // Write 0 to every word of the page
-    page = fromPhys(unsigned *, physStart);
-    for (int i = 0; i < PAGEWORDS; ++i) {
+    unsigned *page = fromPhys(unsigned *, physStart);
+    for (unsigned i = 0; i < PAGEWORDS; ++i) {
         page[i] = 0;
     }
 
@@ -63,6 +61,54 @@ unsigned *allocPage() {
     physStart = pageNext(physStart);
 
     return page;
+}
+
+unsigned copyRegion(unsigned lo, unsigned hi) {
+    // Check that lo < hi
+    if (lo >= hi) {
+        fatal("In copyRegion: 'lo' must be less than 'hi'");
+    }
+
+    // Ensure that lo and hi correspond to suitable page
+    // boundaries.
+    if (lo != pageStart(lo) || hi != pageEnd(hi)) {
+        fatal("In copyRegion: 'lo' or 'hi' invalid page boundaries");
+    }
+
+    // Figure out if there is enough memory left in the
+    // pool between physStart and physEnd to make a copy
+    // of the data between lo and hi.
+    if ((hi - lo) > (physEnd - physStart)) {
+        fatal("In copyRegion: Not enough memory to copy region");
+    }
+
+    // Keep track of where the new memory region starts
+    unsigned start = physStart;
+
+    // Setting up virtual addresses
+    unsigned *srcPage = fromPhys(unsigned *, lo);
+    unsigned *dstPage = fromPhys(unsigned *, start);
+
+    // Update physStart as necessary.
+    printf("\n");
+    unsigned numPages = ((hi + 1) - lo) >> PAGESIZE;
+    for (int i = 0; i < numPages; ++i) {
+        printf("Allocating page [%x-%x]\n", physStart, pageEnd(physStart));
+        physStart = pageNext(physStart);
+    }
+
+    // Copies long by long for each page allocated
+    // TODO Any other tests to make sure this works properly?
+    printf("\nCopying from [%x-%x] to [%x-%x]\n", lo, hi, start,
+           start + (PAGEBYTES * numPages) - 1);
+    for (unsigned i = 0; i < PAGEWORDS * numPages; ++i) {
+        dstPage[i] = srcPage[i];
+    }
+    printf("\n");
+
+    // Return the physical address of the start of the
+    // region where the new copy was placed.
+    return start;
 }
 
 /*-------------------------------------------------------------------------
@@ -157,16 +203,27 @@ void kernel() {
 
     start = pageStart(hdrs[7]);
     end = pageEnd(hdrs[8]);
+    unsigned startCopy = copyRegion(start, end);
+    unsigned curr = startCopy;
     while (start < end) {
         mapPage(proc.pdir, start, start);
+        mapPage(proc.pdir, curr, curr);
+
         start = pageNext(start);
+        curr = pageNext(curr);
     }
     showPdir(proc.pdir);
     setPdir(toPhys(proc.pdir));
 
-    printf("user code is at 0x%x\n", hdrs[9]);
+    printf("\nSrc user code is at 0x%x\n", hdrs[9]);
     initContext(&proc.ctxt, hdrs[9], 0);
-    printf("user is at %x\n", (unsigned)(&proc.ctxt));
+    printf("Src user is at %x\n", (unsigned)(&proc.ctxt));
+
+    unsigned userStart = (hdrs[9] - hdrs[7]) + startCopy;
+    printf("\nDst user code is at 0x%x\n", userStart);
+    initContext(&proc.ctxt, userStart, 0);
+    printf("Dst user is at %x\n", (unsigned)(&proc.ctxt));
+    printf("\n");
 
     startTimer();
     switchToUser(&proc.ctxt);
@@ -175,7 +232,11 @@ void kernel() {
     halt();
 }
 
-void kputc_imp() { /* A trivial system call */
+/*-------------------------------------------------------------------------
+ * System calls
+ */
+// A Trivial system call
+void kputc_imp() {
     putchar(proc.ctxt.regs.eax);
     switchToUser(&proc.ctxt);
 }
