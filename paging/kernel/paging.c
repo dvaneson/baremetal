@@ -88,9 +88,6 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
 
     unsigned pde_index = (virt >> SUPERSIZE);
     unsigned pte_index = maskTo(virt, SUPERSIZE) >> PAGESIZE;
-    // printf("\nVirt before: %x\n", virt);
-    // printf("PDE index: %x\n", pde_index);
-    // printf("PTE index: %x\n", pte_index);
 
     if (pde_index >= PAGEWORDS) {
         fatal("PDE index out of bounds");

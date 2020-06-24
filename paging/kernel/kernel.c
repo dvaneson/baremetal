@@ -146,7 +146,7 @@ void kernel() {
 
     // Updating the Page Directory means losing the lower address mappings, so
     // they must be re-mapped
-    // 0xb8000 is video ram and thus gives access to
+    // 0xb8000 is video ram
     // 0x1000 is where to find the boot data
     mapPage(newpdir, 0xb8000, 0xb8000);
     mapPage(newpdir, 0x1000, 0x1000);
