@@ -27,8 +27,8 @@ run:	libs
 libs:
 	make -C simpleio
 	make -C mimg
-	# make -C userio
-	# make -C winio
+	make -C userio
+	make -C winio
 
 clean:
 	make -C hello              clean
