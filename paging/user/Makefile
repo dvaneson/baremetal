@@ -1,7 +1,7 @@
 include ../../Makefile.common
 
-INCPATH = -I ../../simpleio
-LIBPATH = -L ../../simpleio -lio
+INCPATH = -I ../../userio
+LIBPATH = -L ../../userio -luserio
 
 all:	user
 

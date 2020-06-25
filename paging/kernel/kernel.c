@@ -146,6 +146,7 @@ void kernel() {
     unsigned i;
     unsigned start, end;
 
+    setVideo(KERNEL_SPACE + 0xb8000);
     setAttr(0x2e);
     cls();
     setAttr(7);

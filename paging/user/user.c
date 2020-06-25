@@ -19,7 +19,7 @@
 */
 /* A simple program that we will run in user mode.
  */
-#include "simpleio.h"
+#include "userio.h"
 
 extern void kputc(unsigned);
 
@@ -31,7 +31,7 @@ void kputs(char *s) {
 
 void cmain() {
     int i;
-    setWindow(1, 23, 47, 32); // user process on right hand side
+    // setWindow(1, 23, 47, 32); // user process on right hand side
     cls();
     puts("in user code\n");
     for (i = 0; i < 4; i++) {

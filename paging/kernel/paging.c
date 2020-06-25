@@ -65,9 +65,6 @@ struct Pdir *newUserPdir(unsigned lo, unsigned hi) {
     struct Pdir *pdir = allocPdir();
     unsigned phys = copyRegion(lo, hi);
 
-    // Add a mapping for video RAM
-    mapPage(pdir, 0xb8000, 0xb8000);
-
     // Add mappings for the region between lo and hi in the virtual address
     // space to physical adresses starting at phys.
     while (lo < hi) {
