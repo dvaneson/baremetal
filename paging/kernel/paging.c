@@ -26,6 +26,7 @@
 #include "simpleio.h" // For printf (debugging output)
 
 extern unsigned *allocPage();
+extern unsigned copyRegion(unsigned lo, unsigned hi);
 extern void fatal(char *msg);
 
 /*-------------------------------------------------------------------------
@@ -37,11 +38,8 @@ struct Pdir *allocPdir() {
     unsigned kern_entries = (PHYSMAP >> SUPERSIZE);
     unsigned kern_addr = (KERNEL_SPACE >> SUPERSIZE);
 
-    // DONE (Step 5): Add superpage mappings to pdir for the first PHYSMAP
-    // bytes of physical memory.  You should use a bitwise or
-    // operation to ensure that the PERMS_KERNELSPACE bits are set
-    // in every PDE that you create.
-
+    // Add superpage mappings to pdir for the first PHYSMAP bytes of physical
+    // memory.
     for (unsigned i = 0; i < kern_entries; ++i) {
         pdir->pde[i + kern_addr] = (i * SUPERBYTES) | PERMS_KERNELSPACE;
     }
@@ -51,6 +49,34 @@ struct Pdir *allocPdir() {
 
 struct Ptab *allocPtab() {
     return (struct Ptab *)allocPage();
+}
+
+struct Pdir *newUserPdir(unsigned lo, unsigned hi) {
+    // Check that lo < hi
+    if (lo >= hi) {
+        fatal("In newUserPdir: 'lo' must be less than 'hi'");
+    }
+
+    // Check that lo and hi are suitable page boundaries.
+    if (lo != pageStart(lo) || hi != pageEnd(hi)) {
+        fatal("In newUserPdir: 'lo' or 'hi' invalid page boundaries");
+    }
+
+    struct Pdir *pdir = allocPdir();
+    unsigned phys = copyRegion(lo, hi);
+
+    // Add a mapping for video RAM
+    mapPage(pdir, 0xb8000, 0xb8000);
+
+    // Add mappings for the region between lo and hi in the virtual address
+    // space to physical adresses starting at phys.
+    while (lo < hi) {
+        mapPage(pdir, lo, phys);
+        phys = pageNext(phys);
+        lo = pageNext(lo);
+    }
+
+    return pdir;
 }
 
 /*-------------------------------------------------------------------------
@@ -65,27 +91,6 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
     virt = alignTo(virt, PAGESIZE);
     phys = alignTo(phys, PAGESIZE);
 
-    // DONE (Step 7): Find the relevant entry in the page directory
-
-    // DONE (Step 7): report a fatal error if there is already a
-    //       superpage mapped at that address (this shouldn't
-    //       be possible at this stage, but we're programming
-    //       defensively).
-
-    // DONE (Step 7): If there is no page table (i.e., the PDE is
-    //       empty), then allocate a new page table and update the
-    //       pdir to point to it.   (use PERMS_USER_RW together with
-    //       the new page table's *physical* address for this.)
-
-    // DONE (Step 7): If there was an existing page table (i.e.,
-    //       the PDE pointed to a page table), then report a fatal
-    //       error if the specific entry we want is already in use.
-
-    // DONE (Step 7): Add an entry in the page table structure to
-    //       complete the mapping of virt to phys.  (Use PERMS_USER_RW
-    //       again, this time combined with the value of the
-    //       phys parameter that was supplied as an input.)
-
     unsigned pde_index = (virt >> SUPERSIZE);
     unsigned pte_index = maskTo(virt, SUPERSIZE) >> PAGESIZE;
 
@@ -93,19 +98,24 @@ void mapPage(struct Pdir *pdir, unsigned virt, unsigned phys) {
         fatal("PDE index out of bounds");
     }
 
-    struct Ptab *ptab = 0;
+    // Find the relevant entry in the page directory and check if it's valid
     unsigned pde = pdir->pde[pde_index];
+    struct Ptab *ptab = 0;
     if (pde & 1) {
+        // Check if the PDE maps to a superpage
         if (pde & PERMS_SUPERPAGE) {
             fatal("PDE maps to a superpage");
         }
 
         // Clear the lower 12 bits to get the Page Table's physical address
         ptab = fromPhys(struct Ptab *, alignTo(pde, PAGESIZE));
+
+        // Check if the PDE is already in use.
         if (ptab->pte[pte_index] & 1) {
             fatal("PTE already mapped to a physical address");
         }
     } else {
+        // Allocate a new page table and update the pdir to point to it.
         ptab = (struct Ptab *)allocPage();
         pdir->pde[pde_index] = toPhys(ptab) + PERMS_USER_RW;
     }

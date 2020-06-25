@@ -46,7 +46,7 @@ unsigned physStart; // Set during initialization to start of memory pool
 unsigned physEnd;   // Set during initialization to end of memory pool
 
 unsigned *allocPage() {
-    // Trigger a fatal error if there is not enough space left
+    // Check if there is enough space left
     if (physEnd < pageEnd(physStart)) {
         fatal("Could not allocate a page of data, not enough memory.");
     }
@@ -69,8 +69,7 @@ unsigned copyRegion(unsigned lo, unsigned hi) {
         fatal("In copyRegion: 'lo' must be less than 'hi'");
     }
 
-    // Ensure that lo and hi correspond to suitable page
-    // boundaries.
+    // Check that lo and hi are suitable page boundaries.
     if (lo != pageStart(lo) || hi != pageEnd(hi)) {
         fatal("In copyRegion: 'lo' or 'hi' invalid page boundaries");
     }
@@ -91,14 +90,13 @@ unsigned copyRegion(unsigned lo, unsigned hi) {
 
     // Update physStart as necessary.
     printf("\n");
-    unsigned numPages = ((hi + 1) - lo) >> PAGESIZE;
+    unsigned numPages = (hi - lo + 1) >> PAGESIZE;
     for (int i = 0; i < numPages; ++i) {
         printf("Allocating page [%x-%x]\n", physStart, pageEnd(physStart));
         physStart = pageNext(physStart);
     }
 
     // Copies long by long for each page allocated
-    // TODO Any other tests to make sure this works properly?
     printf("\nCopying from [%x-%x] to [%x-%x]\n", lo, hi, start,
            start + (PAGEBYTES * numPages) - 1);
     for (unsigned i = 0; i < PAGEWORDS * numPages; ++i) {
@@ -191,38 +189,18 @@ void kernel() {
         fatal("After shrinking region for headers, region is invalid");
     }
 
-    // Now we will build a new page directory:
-    proc.pdir = allocPdir();
+    // Initialize user's page directory'
+    unsigned lo = pageStart(hdrs[7]);
+    unsigned hi = pageEnd(hdrs[8]);
+    unsigned entry = hdrs[9];
 
-    // Updating the Page Directory means losing the lower address mappings, so
-    // they must be re-mapped
-    // 0xb8000 is video ram
-    // 0x1000 is where to find the boot data
-    mapPage(proc.pdir, 0xb8000, 0xb8000);
-    mapPage(proc.pdir, 0x1000, 0x1000);
-
-    start = pageStart(hdrs[7]);
-    end = pageEnd(hdrs[8]);
-    unsigned startCopy = copyRegion(start, end);
-    unsigned curr = startCopy;
-    while (start < end) {
-        mapPage(proc.pdir, start, start);
-        mapPage(proc.pdir, curr, curr);
-
-        start = pageNext(start);
-        curr = pageNext(curr);
-    }
+    proc.pdir = newUserPdir(lo, hi);
     showPdir(proc.pdir);
     setPdir(toPhys(proc.pdir));
 
-    printf("\nSrc user code is at 0x%x\n", hdrs[9]);
-    initContext(&proc.ctxt, hdrs[9], 0);
+    printf("\nSrc user code is at 0x%x\n", entry);
+    initContext(&proc.ctxt, entry, 0);
     printf("Src user is at %x\n", (unsigned)(&proc.ctxt));
-
-    unsigned userStart = (hdrs[9] - hdrs[7]) + startCopy;
-    printf("\nDst user code is at 0x%x\n", userStart);
-    initContext(&proc.ctxt, userStart, 0);
-    printf("Dst user is at %x\n", (unsigned)(&proc.ctxt));
     printf("\n");
 
     startTimer();
