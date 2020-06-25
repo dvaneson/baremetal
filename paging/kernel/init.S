@@ -296,6 +296,9 @@ initIDT:# Add descriptors for exception & interrupt handlers:
         # will be tagged with dpl=3
 	idtcalc	handler=timerHandler, slot=32
 	idtcalc	handler=kputc, slot=0x80, dpl=3
+	idtcalc	handler=uputcharHandler, slot=129, dpl=3
+	idtcalc	handler=uclsHandler, slot=130, dpl=3
+	idtcalc	handler=usetAttrHandler, slot=131, dpl=3
 
 	# Install the new IDT:
 	lidt	idtptr
@@ -440,6 +443,36 @@ timerHandler:
 	pusha
 	leal    stack, %esp
 	jmp     timerInterrupt
+
+uputcharHandler:
+	sub     $4, %esp
+	push    %gs
+	push    %fs
+	push    %es
+	push    %ds
+	pusha
+	leal    stack, %esp
+	jmp     uputchar
+
+uclsHandler:
+	sub     $4, %esp
+	push    %gs
+	push    %fs
+	push    %es
+	push    %ds
+	pusha
+	leal    stack, %esp
+	jmp     ucls
+
+usetAttrHandler:
+	sub     $4, %esp
+	push    %gs
+	push    %fs
+	push    %es
+	push    %ds
+	pusha
+	leal    stack, %esp
+	jmp     usetAttr
 
 #--------------------------------------------------------------------------
 # Switch to user mode:  Takes a single parameter, which provides the

@@ -116,6 +116,7 @@ unsigned copyRegion(unsigned lo, unsigned hi) {
 struct Process {
     struct Context ctxt;
     struct Pdir *pdir;
+    struct Window win;
 };
 
 void initProc(struct Process *proc, unsigned lo, unsigned hi, unsigned entry) {
@@ -212,6 +213,15 @@ void kernel() {
 
     initProc(proc + 0, lo, hi, entry);
     initProc(proc + 1, lo, hi, entry);
+
+    // Set windows for each process
+    wsetWindow(&proc[0].win, 1, 11, 47, 32); // process 0 upper right
+    wsetAttr(&proc[0].win, 1);               // blue output
+
+    wsetWindow(&proc[1].win, 13, 11, 47, 32); // process 1 lower right
+    wsetAttr(&proc[1].win, 4);                // red output
+
+    // Set current to a process
     current = proc + 1;
 
     // Set the page directory control register and switch to the user program
@@ -235,7 +245,7 @@ static void tick() {
     static unsigned ticks = 0;
     ticks++;
     if ((ticks & 15) == 0) {
-        printf(".");
+        wprintf(&current->win, ".");
         current = (current == proc) ? (proc + 1) : proc;
     }
 }
@@ -244,6 +254,21 @@ void timerInterrupt() {
     maskAckIRQ(TIMERIRQ);
     enableIRQ(TIMERIRQ);
     tick();
+    switchToUser(&current->ctxt);
+}
+
+void uputchar() {
+    wputchar(&current->win, current->ctxt.regs.eax);
+    switchToUser(&current->ctxt);
+}
+
+void ucls() {
+    wcls(&current->win);
+    switchToUser(&current->ctxt);
+}
+
+void usetAttr() {
+    wsetAttr(&current->win, current->ctxt.regs.eax);
     switchToUser(&current->ctxt);
 }
 
