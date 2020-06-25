@@ -207,7 +207,7 @@ void kernel() {
         fatal("After shrinking region for headers, region is invalid");
     }
 
-    // Initialize user's page directory'
+    // Initialize user's page directory
     unsigned lo = pageStart(hdrs[7]);
     unsigned hi = pageEnd(hdrs[8]);
     unsigned entry = hdrs[9];
