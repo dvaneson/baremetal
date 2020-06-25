@@ -110,13 +110,29 @@ unsigned copyRegion(unsigned lo, unsigned hi) {
 }
 
 /*-------------------------------------------------------------------------
- * Context data structures: a place holder for when we get back to
- * context switching ...
+ * Process data structure: to hold information about processes and allow for
+ * context switching
  */
 struct Process {
     struct Context ctxt;
     struct Pdir *pdir;
 };
+
+void initProcess(struct Process *proc, unsigned lo, unsigned hi,
+                 unsigned entry) {
+    if (proc == 0) {
+        fatal("In initProcess: Invalid process pointer");
+    }
+
+    proc->pdir = newUserPdir(lo, hi);
+    showPdir(proc->pdir);
+
+    printf("\nUser code is at 0x%x\n", entry);
+    initContext(&proc->ctxt, entry, 0);
+    printf("User is at %x\n", (unsigned)(&proc->ctxt));
+    printf("\n");
+}
+
 struct Process proc;
 
 /*-------------------------------------------------------------------------
@@ -193,16 +209,10 @@ void kernel() {
     unsigned lo = pageStart(hdrs[7]);
     unsigned hi = pageEnd(hdrs[8]);
     unsigned entry = hdrs[9];
+    initProcess(&proc, lo, hi, entry);
 
-    proc.pdir = newUserPdir(lo, hi);
-    showPdir(proc.pdir);
+    // Set the page directory control register and switch to the user program
     setPdir(toPhys(proc.pdir));
-
-    printf("\nSrc user code is at 0x%x\n", entry);
-    initContext(&proc.ctxt, entry, 0);
-    printf("Src user is at %x\n", (unsigned)(&proc.ctxt));
-    printf("\n");
-
     startTimer();
     switchToUser(&proc.ctxt);
 
