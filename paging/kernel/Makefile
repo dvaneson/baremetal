@@ -3,11 +3,11 @@ include ../../Makefile.common
 KERNEL_SPACE    = 0xc0000000      # Kernel space starts at 3GB
 KERNEL_LOAD     = 0x00100000      # Kernel loads at 1MB
 
-INCPATH = -I ../../simpleio -I ../../mimg
+INCPATH = -I ../../winio -I ../../mimg
 CCDEFS  = -DKERNEL_SPACE=${KERNEL_SPACE} \
           -DKERNEL_LOAD=${KERNEL_LOAD}
 
-LIBPATH = -L ../../simpleio -lio
+LIBPATH = -L ../../winio -lwinio
 LDDEFS  = --defsym KERNEL_SPACE=${KERNEL_SPACE} \
           --defsym KERNEL_LOAD=${KERNEL_LOAD}
 

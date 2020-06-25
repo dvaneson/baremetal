@@ -26,7 +26,7 @@
 #include "memory.h"
 #include "mimguser.h"
 #include "paging.h"
-#include "simpleio.h"
+#include "winio.h"
 
 /*-------------------------------------------------------------------------
  * Basic code for halting the processor and reporting a fatal error:
@@ -118,13 +118,9 @@ struct Process {
     struct Pdir *pdir;
 };
 
-struct Process proc[2];
-struct Process *current;
-
-void initProcess(struct Process *proc, unsigned lo, unsigned hi,
-                 unsigned entry) {
+void initProc(struct Process *proc, unsigned lo, unsigned hi, unsigned entry) {
     if (proc == 0) {
-        fatal("In initProcess: Invalid process pointer");
+        fatal("In initProc: Invalid process pointer");
     }
 
     proc->pdir = newUserPdir(lo, hi);
@@ -135,6 +131,9 @@ void initProcess(struct Process *proc, unsigned lo, unsigned hi,
     printf("User is at %x\n", (unsigned)(&proc->ctxt));
     printf("\n");
 }
+
+struct Process proc[2];
+struct Process *current;
 
 /*-------------------------------------------------------------------------
  * The main "kernel" code:
@@ -211,8 +210,8 @@ void kernel() {
     unsigned hi = pageEnd(hdrs[8]);
     unsigned entry = hdrs[9];
 
-    initProcess(proc + 0, lo, hi, entry);
-    initProcess(proc + 1, lo, hi, entry);
+    initProc(proc + 0, lo, hi, entry);
+    initProc(proc + 1, lo, hi, entry);
     current = proc + 1;
 
     // Set the page directory control register and switch to the user program

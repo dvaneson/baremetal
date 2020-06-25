@@ -23,7 +23,7 @@
  *-----------------------------------------------------------------------*/
 #include "paging.h"
 #include "memory.h"
-#include "simpleio.h" // For printf (debugging output)
+#include "winio.h" // For printf (debugging output)
 
 extern unsigned *allocPage();
 extern unsigned copyRegion(unsigned lo, unsigned hi);

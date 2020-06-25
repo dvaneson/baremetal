@@ -356,7 +356,8 @@ nohandler:			# dummy interrupt handler
 	pushl	%ebx
 	pushl	%eax
 	pushl	$excepted
-	call	printf
+	pushl   $console
+	call    wprintf
 	addl	$12, %esp
 
 1:	hlt
@@ -377,7 +378,8 @@ pfhandler:
         movl	52(%ebx), %eax	# get faulting eip
         pushl	%eax
 	pushl	$pfmsg
-	call	printf
+	pushl   $console
+	call    wprintf
 	addl	$16, %esp
 	jmp	halt
 
