@@ -118,6 +118,9 @@ struct Process {
     struct Pdir *pdir;
 };
 
+struct Process proc[2];
+struct Process *current;
+
 void initProcess(struct Process *proc, unsigned lo, unsigned hi,
                  unsigned entry) {
     if (proc == 0) {
@@ -132,8 +135,6 @@ void initProcess(struct Process *proc, unsigned lo, unsigned hi,
     printf("User is at %x\n", (unsigned)(&proc->ctxt));
     printf("\n");
 }
-
-struct Process proc;
 
 /*-------------------------------------------------------------------------
  * The main "kernel" code:
@@ -209,12 +210,15 @@ void kernel() {
     unsigned lo = pageStart(hdrs[7]);
     unsigned hi = pageEnd(hdrs[8]);
     unsigned entry = hdrs[9];
-    initProcess(&proc, lo, hi, entry);
+
+    initProcess(proc + 0, lo, hi, entry);
+    initProcess(proc + 1, lo, hi, entry);
+    current = proc + 1;
 
     // Set the page directory control register and switch to the user program
-    setPdir(toPhys(proc.pdir));
+    setPdir(toPhys(current->pdir));
     startTimer();
-    switchToUser(&proc.ctxt);
+    switchToUser(&current->ctxt);
 
     printf("The kernel will now halt!\n");
     halt();
@@ -223,10 +227,9 @@ void kernel() {
 /*-------------------------------------------------------------------------
  * System calls
  */
-// A Trivial system call
 void kputc_imp() {
-    putchar(proc.ctxt.regs.eax);
-    switchToUser(&proc.ctxt);
+    putchar(current->ctxt.regs.eax);
+    switchToUser(&current->ctxt);
 }
 
 static void tick() {
@@ -234,7 +237,7 @@ static void tick() {
     ticks++;
     if ((ticks & 15) == 0) {
         printf(".");
-        // current = (current == user) ? (user + 1) : user;
+        current = (current == proc) ? (proc + 1) : proc;
     }
 }
 
@@ -242,7 +245,7 @@ void timerInterrupt() {
     maskAckIRQ(TIMERIRQ);
     enableIRQ(TIMERIRQ);
     tick();
-    switchToUser(&proc.ctxt);
+    switchToUser(&current->ctxt);
 }
 
 /*-----------------------------------------------------------------------*/
