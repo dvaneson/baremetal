@@ -31,14 +31,15 @@ void kputs(char *s) {
 
 void cmain() {
     int i;
+    char buf[100];
 
     cls();
     puts("in user code\n");
-    for (i = 0; i < 4; i++) {
+    for (i = 0; i < 50; i++) {
         kputs("hello, kernel console\n");
-        puts("hello, user console\n");
+        printf("%d: hello, user console\n", i);
     }
-    puts("\n\nUser code does not return\n");
+    printf("\n\nUser code does not return\n");
     for (;;) { /* Don't return! */
     }
     puts("This message won't appear!\n");
