@@ -67,13 +67,9 @@
 #define maskTo(e, a)  ((e) & ((1 << (a)) - 1)) /* extract lower a bits of e */
 #define alignTo(e, a) (((e) >> (a)) << (a))    /* clear lower a bits of e */
 
-// DONE (Step 2): complete the following macro definitions.  They need to
-// be implemented here as macros rather than inline functions because
-// this code will be #included in assembly code too, and the assembler
-// doesn't understand C syntax ...
-
 // pageStart(x) should return the address of the first byte in the page
-// that contains address x.  e.g. pageStart(0x1234) = 0x1000.
+// that contains address x.
+// e.g. pageStart(0x1234) = 0x1000.
 #define pageStart(x) ((x) & ~(PAGEMASK))
 
 // pageEnd(x) should return the address of the last byte in the page
