@@ -238,7 +238,9 @@ void kernel() {
  * System calls
  */
 void kputc_imp() {
+    setAttr(current->win.attr);
     putchar(current->ctxt.regs.eax);
+    setAttr(7);
     switchToUser(&current->ctxt);
 }
 
