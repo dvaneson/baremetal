@@ -41,7 +41,7 @@ struct Pdir *allocPdir() {
     // Add superpage mappings to pdir for the first PHYSMAP bytes of physical
     // memory.
     for (unsigned i = 0; i < kern_entries; ++i) {
-        pdir->pde[i + kern_addr] = (i * SUPERBYTES) | PERMS_KERNELSPACE;
+        pdir->pde[i + kern_addr] = (i * SUPERBYTES) + PERMS_KERNELSPACE;
     }
 
     return pdir;
